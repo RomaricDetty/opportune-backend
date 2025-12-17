@@ -84,7 +84,7 @@ const Produit = sequelize.define('Produit', {
         onDelete: 'CASCADE'
     },
     imagePrincipale: {
-        type: DataTypes.TEXT,
+        type: DataTypes.TEXT('long'),
         allowNull: true
     },
     images: {
@@ -100,7 +100,6 @@ const Produit = sequelize.define('Produit', {
     reference: {
         type: DataTypes.STRING(50),
         allowNull: true,
-        unique: true
     },
     isActive: {
         type: DataTypes.BOOLEAN,
@@ -110,6 +109,11 @@ const Produit = sequelize.define('Produit', {
     isAvailable: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+        allowNull: false
+    },
+    featured: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
         allowNull: false
     }
 }, {

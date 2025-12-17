@@ -15,7 +15,6 @@ const SiteCategory = sequelize.define('SiteCategory', {
     libelle: {
         type: DataTypes.STRING(100),
         allowNull: false,
-        unique: true,
         validate: {
             notEmpty: {
                 msg: 'Le libellé ne peut pas être vide'

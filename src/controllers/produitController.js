@@ -138,9 +138,12 @@ class ProduitController {
                 });
             }
 
+            // Normaliser idCategory : convertir chaîne vide en null
+            const normalizedIdCategory = idCategory && idCategory.trim() !== '' ? idCategory : null;
+
             // Vérifier que la catégorie existe si elle est fournie
-            if (idCategory) {
-                const category = await Category.findByPk(idCategory);
+            if (normalizedIdCategory) {
+                const category = await Category.findByPk(normalizedIdCategory);
                 if (!category) {
                     return res.status(404).json({
                         success: false,
@@ -162,9 +165,36 @@ class ProduitController {
                 }
             }
 
-            // Traiter les images (base64 ou fichiers)
-            const processedMainImage = ImageHandler.processMainImage(imagePrincipale);
-            const processedImages = ImageHandler.processImagesArray(images);
+            // Extraire les images depuis req.files (fichiers uploadés) ou req.body (base64)
+            let mainImageToProcess = null;
+            let imagesToProcess = null;
+
+            // Priorité aux fichiers uploadés (req.files)
+            if (req.files) {
+                // Image principale depuis fichier uploadé
+                if (req.files.imagePrincipale && req.files.imagePrincipale.length > 0) {
+                    const file = req.files.imagePrincipale[0];
+                    mainImageToProcess = ImageHandler.processMainImage(file.buffer, file.mimetype);
+                }
+                // Images supplémentaires depuis fichiers uploadés
+                if (req.files.images && req.files.images.length > 0) {
+                    imagesToProcess = req.files.images.map(file => 
+                        ImageHandler.processMainImage(file.buffer, file.mimetype)
+                    );
+                }
+            }
+
+            // Si pas de fichiers uploadés, utiliser req.body (base64 ou autres formats)
+            if (!mainImageToProcess && imagePrincipale) {
+                mainImageToProcess = imagePrincipale;
+            }
+            if (!imagesToProcess && images) {
+                imagesToProcess = images;
+            }
+
+            // Traiter les images (base64 ou fichiers) - processMainImage gère déjà les deux cas
+            const processedMainImage = mainImageToProcess ? ImageHandler.processMainImage(mainImageToProcess) : null;
+            const processedImages = imagesToProcess ? ImageHandler.processImagesArray(imagesToProcess) : [];
 
             // Valider les images base64 si présentes
             if (processedMainImage && ImageHandler.isBase64(processedMainImage)) {
@@ -195,7 +225,7 @@ class ProduitController {
                 prix,
                 quantite_stock,
                 idMarque,
-                idCategory,
+                idCategory: normalizedIdCategory,
                 imagePrincipale: processedMainImage,
                 images: processedImages,
                 caracteristiques: caracteristiques || {},
@@ -268,10 +298,15 @@ class ProduitController {
                 }
             }
 
+            // Normaliser idCategory : convertir chaîne vide en null
+            const normalizedIdCategory = idCategory !== undefined 
+                ? (idCategory && idCategory.trim() !== '' ? idCategory : null)
+                : produit.idCategory;
+
             // Vérifier que la catégorie existe si elle est modifiée
-            if (idCategory !== undefined && idCategory !== produit.idCategory) {
-                if (idCategory) {
-                    const category = await Category.findByPk(idCategory);
+            if (idCategory !== undefined && normalizedIdCategory !== produit.idCategory) {
+                if (normalizedIdCategory) {
+                    const category = await Category.findByPk(normalizedIdCategory);
                     if (!category) {
                         return res.status(404).json({
                             success: false,
@@ -294,13 +329,40 @@ class ProduitController {
                 }
             }
 
+            // Extraire les images depuis req.files (fichiers uploadés) ou req.body (base64)
+            let mainImageToProcess = undefined;
+            let imagesToProcess = undefined;
+
+            // Priorité aux fichiers uploadés (req.files)
+            if (req.files) {
+                // Image principale depuis fichier uploadé
+                if (req.files.imagePrincipale && req.files.imagePrincipale.length > 0) {
+                    const file = req.files.imagePrincipale[0];
+                    mainImageToProcess = ImageHandler.processMainImage(file.buffer, file.mimetype);
+                }
+                // Images supplémentaires depuis fichiers uploadés
+                if (req.files.images && req.files.images.length > 0) {
+                    imagesToProcess = req.files.images.map(file => 
+                        ImageHandler.processMainImage(file.buffer, file.mimetype)
+                    );
+                }
+            }
+
+            // Si pas de fichiers uploadés, utiliser req.body (base64 ou autres formats)
+            if (mainImageToProcess === undefined && imagePrincipale !== undefined) {
+                mainImageToProcess = imagePrincipale;
+            }
+            if (imagesToProcess === undefined && images !== undefined) {
+                imagesToProcess = images;
+            }
+
             // Traiter les images (base64 ou fichiers) si fournies
-            let processedMainImage = imagePrincipale !== undefined 
-                ? ImageHandler.processMainImage(imagePrincipale) 
+            let processedMainImage = mainImageToProcess !== undefined 
+                ? ImageHandler.processMainImage(mainImageToProcess) 
                 : produit.imagePrincipale;
             
-            let processedImages = images !== undefined 
-                ? ImageHandler.processImagesArray(images) 
+            let processedImages = imagesToProcess !== undefined 
+                ? ImageHandler.processImagesArray(imagesToProcess) 
                 : produit.images;
 
             // Valider les images base64 si présentes
@@ -332,7 +394,7 @@ class ProduitController {
                 prix,
                 quantite_stock,
                 idMarque,
-                idCategory,
+                idCategory: normalizedIdCategory,
                 imagePrincipale: processedMainImage,
                 images: processedImages,
                 caracteristiques,
