@@ -25,8 +25,8 @@ const swaggerOptions = {
                 description: 'Serveur de développement'
             },
             {
-                url: 'https://api.opportune.com/api',
-                description: 'Serveur de production'
+                url: 'http://localhost:6981/api',
+                description: 'Serveur VPS de production'
             }
         ],
         components: {
