@@ -25,7 +25,7 @@ const swaggerOptions = {
                 description: 'Serveur de développement'
             },
             {
-                url: 'http://localhost:6981/api',
+                url: 'http://5.182.17.192:6981/api',
                 description: 'Serveur VPS de production'
             }
         ],
