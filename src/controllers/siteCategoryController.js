@@ -86,7 +86,7 @@ class SiteCategoryController {
                 include: [
                     {
                         model: Category,
-                        as: 'categoriesElectromenager',
+                        as: 'categories', // Correction ici: remplace 'categoriesElectromenager' par 'categories'
                         attributes: ['id', 'libelle']
                     },
                     {
