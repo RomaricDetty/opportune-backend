@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-
+const authenticate = require('../middleware/auth');
 // Importer toutes les routes
 const siteCategoryRoutes = require('./siteCategoryRoutes');
 const categoryRoutes = require('./categoryRoutes');
 const marqueRoutes = require('./marqueRoutes');
 const produitRoutes = require('./produitRoutes');
 const adminRoutes = require('./adminRoutes');
-
+const demandeDevisRoutes = require('./demandeDevisRoutes');
+const publiciteRoutes = require('./publiciteRoutes')
 /**
  * Configuration centrale de toutes les routes de l'API
  * Préfixe général : /api
@@ -24,6 +25,11 @@ router.use('/brands', marqueRoutes);
 // Routes pour les produits
 router.use('/products', produitRoutes);
 
+// Routes pour les demandes de devis
+router.use('/demande-devis', demandeDevisRoutes);
+
+// Routes pour les publicites 
+router.use('/publicites', publiciteRoutes)
 /**
  * @swagger
  * /health:

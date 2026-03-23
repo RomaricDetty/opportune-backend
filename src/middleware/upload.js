@@ -58,9 +58,16 @@ const uploadProductImages = upload.fields([
     { name: 'images', maxCount: 10 }
 ]);
 
+
+/**
+ * Middleware pour uploader les images d'une publicité (max 5)
+ */
+const uploadPubliciteImages = upload.single('images');
+
 module.exports = {
     uploadMainImage,
     uploadMultipleImages,
     uploadProductImages,
+    uploadPubliciteImages,
     upload
 };

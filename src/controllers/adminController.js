@@ -88,7 +88,7 @@ class AdminController {
             console.error('Erreur lors de l\'authentification:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Erreur lors de l\'authentification'
+                message: error.message
             });
         }
     }

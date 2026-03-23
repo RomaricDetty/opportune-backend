@@ -70,6 +70,27 @@ router.get('/', ProduitController.getAll);
 
 /**
  * @swagger
+ * /products/home:
+ *   get:
+ *     summary: Récupérer les produits pour la page d'accueil
+ *     tags: [Produits]
+ *     description: Récupère une sélection de produits pour la page d'accueil, incluant les produits en promotion et les nouveautés.
+ *     responses:
+ *       200:
+ *         description: Liste des produits pour la page d'accueil
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Produit'
+ *       500:
+ *         description: Erreur serveur
+ */
+router.get('/home', ProduitController.getAllHomeProduct);
+
+/**
+ * @swagger
  * /products/{id}:
  *   get:
  *     summary: Récupérer un produit par ID
@@ -106,11 +127,11 @@ router.get('/:id', ProduitController.getById);
  *     tags: [Produits]
  *     description: |
  *       Crée un nouveau produit avec gestion flexible des images.
- *       
+ *
  *       **Deux méthodes d'envoi d'images :**
  *       1. **Fichiers uploadés** (multipart/form-data) : Envoyez les fichiers directement, ils seront convertis en base64 automatiquement
  *       2. **Base64 direct** (application/json) : Envoyez les images déjà en base64
- *       
+ *
  *       **Formats d'images supportés** : JPEG, PNG, GIF, WEBP, SVG
  *       **Taille max par fichier** : 10MB
  *     requestBody:
@@ -198,10 +219,6 @@ router.post('/', authenticate, uploadProductImages, validateProduit, ProduitCont
  *   put:
  *     summary: Mettre à jour un produit
  *     tags: [Produits]
- *     description: |
- *       Met à jour un produit existant. Les images peuvent être mises à jour avec les mêmes formats que la création.
- *       
- *       **Note** : Si vous ne fournissez pas `imagePrincipale` ou `images`, les valeurs existantes sont conservées.
  *     parameters:
  *       - in: path
  *         name: id
@@ -333,5 +350,27 @@ router.post('/:id/restore', ProduitController.restore);
  *         description: Produit non trouvé
  */
 router.put('/:id/stock', ProduitController.updateStock);
+
+/**
+ * @swagger
+ * /products/{id}/views:
+ *   patch:
+ *     summary: Incrémenter le nombre de vues d'un produit
+ *     tags: [Produits]
+ *     description: Appelé automatiquement à chaque visite de la page produit.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Nombre de vues mis à jour
+ *       404:
+ *         description: Produit non trouvé
+ */
+router.patch('/:id/views', ProduitController.incrementViews);  
 
 module.exports = router;

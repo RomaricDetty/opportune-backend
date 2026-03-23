@@ -12,10 +12,10 @@ class ProduitController {
      */
     static async getAll(req, res) {
         try {
-            const { idMarque, idCategory, isActive, isAvailable, minPrice, maxPrice } = req.query;
+            const { idMarque, idCategory, isActive, isAvailable, minPrice, maxPrice, libelle } = req.query;
             const where = {};
-
             if (idMarque) where.idMarque = idMarque;
+            if (libelle) where.libelle = { [Op.like]: `%${libelle}%` };
             if (idCategory) where.idCategory = idCategory;
             if (isActive !== undefined) where.isActive = isActive === 'true';
             if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
@@ -24,7 +24,6 @@ class ProduitController {
                 if (minPrice) where.prix[Op.gte] = parseFloat(minPrice);
                 if (maxPrice) where.prix[Op.lte] = parseFloat(maxPrice);
             }
-
             const produits = await Produit.findAll({
                 where,
                 include: [
@@ -46,7 +45,7 @@ class ProduitController {
                 ],
                 order: [['createdAt', 'DESC']]
             });
-
+            
             return res.status(200).json({
                 success: true,
                 data: produits
@@ -59,6 +58,98 @@ class ProduitController {
             });
         }
     }
+
+
+     /**
+     * Récupérer tous les produits page d'accueil
+     * GET /api/produits/getAllHomeProduct
+     */
+   static async getAllHomeProduct(req, res) {
+    try {
+        const categories = await Category.findAll({
+            where: { isSiteCategory: true },
+            attributes: ['id', 'libelle']
+        });
+
+        const result = [];
+
+        for (const category of categories) {
+            const produits = await Produit.findAll({
+                where: { idCategory: category.id },
+                include: [
+                    {
+                        model: Marque,
+                        as: 'marque',
+                        attributes: ['id', 'libelle', 'logo'],
+                        include: [{
+                            model: SiteCategory,
+                            as: 'siteCategory',
+                            attributes: ['id', 'libelle']
+                        }]
+                    },
+                    {
+                        model: Category,
+                        as: 'category',
+                        attributes: ['id', 'libelle']
+                    }
+                ],
+                order: [['createdAt', 'DESC']],
+                limit: 4
+            });
+
+            if (produits.length > 0) {
+                result.push({
+                    categoryId: category.id,
+                    category: category.libelle,
+                    produits: produits
+                });
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error('Erreur récupération Produits:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la récupération des produits'
+        });
+    }
+}
+
+/**
+     * Mettre à jour nombre de vue un produit par ID
+     * PATCH /api/produits/:id/views
+     */
+static async incrementViews(req, res) {
+    try {
+        const { id } = req.params;
+
+        const produit = await Produit.findByPk(id);
+        if (!produit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Produit non trouvé'
+            });
+        }
+
+        await produit.increment('nombreVues');
+
+        return res.status(200).json({
+            success: true,
+            nombreVues: produit.nombreVues + 1
+        });
+    } catch (error) {
+        console.error('Erreur incrementViews :', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la mise à jour des vues'
+        });
+    }
+}
 
     /**
      * Récupérer un produit par ID

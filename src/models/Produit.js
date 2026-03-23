@@ -101,6 +101,11 @@ const Produit = sequelize.define('Produit', {
         type: DataTypes.STRING(50),
         allowNull: true,
     },
+    nombreVues: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false
+    },
     isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

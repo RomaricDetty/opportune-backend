@@ -45,11 +45,10 @@ const validateCategory = [
         .isLength({ min: 2, max: 100 })
         .withMessage('Le libellé doit contenir entre 2 et 100 caractères'),
 
-    body('idSiteCategory')
-        .notEmpty()
-        .withMessage('L\'ID de la catégorie principale est requis')
-        .isUUID()
-        .withMessage('L\'ID de la catégorie principale doit être un UUID valide'),
+    body('isSiteCategory')
+        .optional()
+        .trim(),
+    
 
     body('description')
         .optional()

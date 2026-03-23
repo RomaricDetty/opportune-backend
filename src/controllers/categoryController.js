@@ -7,8 +7,13 @@ class CategoryController {
      * GET /api/categories
      */
     static async getAll(req, res) {
+        const { isSiteCategory } = req.query;
+        const where = {};
+        if (isSiteCategory !== undefined) where.isSiteCategory = isSiteCategory === 'true';
         try {
-            const categories = await Category.findAll();
+            const categories = await Category.findAll({
+                where
+            });
             return res.status(200).json({
                 success: true,
                 data: categories
@@ -54,8 +59,8 @@ class CategoryController {
      */
     static async create(req, res) {
         try {
-            const { libelle, description, isActive } = req.body;
-            const category = await Category.create({ libelle, description, isActive });
+            const { libelle, description, isActive, isSiteCategory} = req.body;
+            const category = await Category.create({ libelle, description, isActive, isSiteCategory});
             return res.status(201).json({
                 success: true,
                 message: 'Catégorie créée avec succès',
@@ -76,15 +81,16 @@ class CategoryController {
     static async update(req, res) {
         try {
             const { id } = req.params;
-            const { libelle, description, isActive } = req.body;
+            const { libelle, description, isActive, isSiteCategory } = req.body;
             const category = await Category.findByPk(id);
             if (!category) {
                 return res.status(404).json({
                     success: false,
+                    id : id,
                     message: 'Catégorie non trouvée'
                 });
             }
-            await category.update({ libelle, description, isActive });
+            await category.update({ libelle, description, isActive, isSiteCategory});
             return res.status(200).json({
                 success: true,
                 message: 'Catégorie mise à jour avec succès',

@@ -74,8 +74,8 @@ const startServer = async () => {
         await syncModels(false);
 
         // Exécuter le seeding de la base de données
-        console.log('Exécution du seeding de la base de données...');
-        await seedDatabase();
+        // console.log('Exécution du seeding de la base de données...');
+        // await seedDatabase();
 
         // Démarrer le serveur
         app.listen(PORT, () => {

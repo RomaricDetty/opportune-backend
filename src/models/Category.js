@@ -32,13 +32,18 @@ const Category = sequelize.define('Category', {
     },
     idSiteCategory: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: SiteCategory,
             key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
+    },
+    isSiteCategory : {
+    type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
         type: DataTypes.BOOLEAN,
