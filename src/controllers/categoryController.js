@@ -7,12 +7,11 @@ class CategoryController {
      * GET /api/categories
      */
     static async getAll(req, res) {
-        const { isSiteCategory } = req.query;
         const where = {};
-        if (isSiteCategory !== undefined) where.isSiteCategory = isSiteCategory === 'true';
         try {
             const categories = await Category.findAll({
-                where
+                where,
+                order: [['createdAt', 'DESC']]
             });
             return res.status(200).json({
                 success: true,
@@ -59,8 +58,24 @@ class CategoryController {
      */
     static async create(req, res) {
         try {
-            const { libelle, description, isActive, isSiteCategory} = req.body;
-            const category = await Category.create({ libelle, description, isActive, isSiteCategory});
+            const { libelle, description, isActive, idSiteCategory } = req.body;
+            const normalizedIdSiteCategory =
+                idSiteCategory && String(idSiteCategory).trim() !== '' ? idSiteCategory.trim() : null;
+            if (normalizedIdSiteCategory) {
+                const siteCategory = await SiteCategory.findByPk(normalizedIdSiteCategory);
+                if (!siteCategory) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Catégorie principale (site) non trouvée'
+                    });
+                }
+            }
+            const category = await Category.create({
+                libelle,
+                description,
+                isActive,
+                idSiteCategory: normalizedIdSiteCategory
+            });
             return res.status(201).json({
                 success: true,
                 message: 'Catégorie créée avec succès',
@@ -81,7 +96,7 @@ class CategoryController {
     static async update(req, res) {
         try {
             const { id } = req.params;
-            const { libelle, description, isActive, isSiteCategory } = req.body;
+            const { libelle, description, isActive, idSiteCategory } = req.body;
             const category = await Category.findByPk(id);
             if (!category) {
                 return res.status(404).json({
@@ -90,7 +105,27 @@ class CategoryController {
                     message: 'Catégorie non trouvée'
                 });
             }
-            await category.update({ libelle, description, isActive, isSiteCategory});
+            let nextIdSiteCategory = category.idSiteCategory;
+            if (idSiteCategory !== undefined) {
+                const trimmed =
+                    idSiteCategory && String(idSiteCategory).trim() !== '' ? idSiteCategory.trim() : null;
+                if (trimmed) {
+                    const siteCategory = await SiteCategory.findByPk(trimmed);
+                    if (!siteCategory) {
+                        return res.status(404).json({
+                            success: false,
+                            message: 'Catégorie principale (site) non trouvée'
+                        });
+                    }
+                }
+                nextIdSiteCategory = trimmed;
+            }
+            await category.update({
+                libelle,
+                description,
+                isActive,
+                idSiteCategory: nextIdSiteCategory
+            });
             return res.status(200).json({
                 success: true,
                 message: 'Catégorie mise à jour avec succès',
@@ -228,7 +263,8 @@ class CategoryController {
                         as: 'siteCategory',
                         attributes: ['id', 'libelle']
                     }
-                ]
+                ],
+                order: [['createdAt', 'DESC']]
             });
 
             // Définir les listes de sous-catégories

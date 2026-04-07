@@ -17,16 +17,22 @@ const authenticate = async (req, res, next) => {
             });
         }
 
-        // Vérifier le format "Bearer <token>"
-        const parts = authHeader.split(' ');
-        if (parts.length !== 2 || parts[0] !== 'Bearer') {
+        // Format "Bearer <token>" (insensible à la casse sur le schéma)
+        const parts = authHeader.split(/\s+/);
+        if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
             return res.status(401).json({
                 success: false,
                 message: 'Format de token invalide.'
             });
         }
 
-        const token = parts[1];
+        const token = parts[1].trim();
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token manquant.'
+            });
+        }
 
         // Vérifier et décoder le token
         const JWT_SECRET = process.env.JWT_SECRET || '1ts@opportune-$ecret-k3y_f4r==projEct-ch@nge-in-p@';

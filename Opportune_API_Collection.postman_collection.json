@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "opportune-api-collection",
 		"name": "Opportune API - Collection Complète",
-		"description": "Collection complète de toutes les APIs du backend Opportune",
+		"description": "Collection alignée sur le backend Opportune : /api/health, /api/admins, /api/site-categories, /api/categories, /api/brands, /api/products, /api/demande-devis, /api/publicites.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -360,7 +360,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"libelle\": \"Réfrigérateurs\",\n  \"description\": \"Sous-catégorie de réfrigérateurs\",\n  \"idSiteCategory\": \"\"\n}"
+							"raw": "{\n  \"libelle\": \"Réfrigérateurs\",\n  \"description\": \"Sous-catégorie de réfrigérateurs\",\n  \"isActive\": true\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/categories",
@@ -452,7 +452,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"libelle\": \"Réfrigérateurs\",\n  \"description\": \"Description mise à jour\"\n}"
+							"raw": "{\n  \"libelle\": \"Réfrigérateurs\",\n  \"description\": \"Description mise à jour\",\n  \"isActive\": true\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/categories/:id",
@@ -698,7 +698,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/products?idMarque=&idCategory=&isActive=true&isAvailable=true&minPrice=&maxPrice=",
+							"raw": "{{baseUrl}}/api/products?idMarque=&idCategory=&libelle=&isActive=true&isAvailable=true&minPrice=&maxPrice=",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "products"],
 							"query": [
@@ -710,6 +710,12 @@
 								{
 									"key": "idCategory",
 									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "libelle",
+									"value": "",
+									"description": "Recherche partielle sur le libellé",
 									"disabled": true
 								},
 								{
@@ -735,6 +741,19 @@
 					}
 				},
 				{
+					"name": "Produits - Page d'accueil",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/home",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "home"]
+						},
+						"description": "GET /api/products/home — par site_categories actives et produits liés via category.idSiteCategory."
+					}
+				},
+				{
 					"name": "Get Produit by ID",
 					"request": {
 						"method": "GET",
@@ -750,6 +769,25 @@
 								}
 							]
 						}
+					}
+				},
+				{
+					"name": "Incrémenter vues produit",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/:id/views",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", ":id", "views"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "PATCH /api/products/:id/views — incrémente nombreVues."
 					}
 				},
 				{
@@ -964,6 +1002,384 @@
 							]
 						},
 						"description": "Opérations possibles: 'set' (définir), 'add' (ajouter), 'subtract' (soustraire)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Demande de devis",
+			"item": [
+				{
+					"name": "Liste demandes de devis",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/demande-devis?statut=&search=",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "demande-devis"],
+							"query": [
+								{
+									"key": "statut",
+									"value": "en_attente",
+									"description": "en_attente | en_cours | validee | annulee",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Stats demandes (par statut)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/demande-devis/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "demande-devis", "stats"]
+						},
+						"description": "GET /api/demande-devis/stats — compteurs par statut, total produits et catégories."
+					}
+				},
+				{
+					"name": "Get demande par ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/demande-devis/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "demande-devis", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Créer demande de devis (public)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nomClient\": \"Dupont\",\n  \"prenomClient\": \"Jean\",\n  \"telephone\": \"+2250101010101\",\n  \"email\": \"jean@example.com\",\n  \"adresse\": \"Abidjan\",\n  \"message\": \"Demande de devis\",\n  \"items\": [\n    { \"idProduit\": \"\", \"quantite\": 1 }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/demande-devis",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "demande-devis"]
+						},
+						"description": "POST sans authentification. Au moins un item { idProduit, quantite } requis."
+					}
+				},
+				{
+					"name": "Mettre à jour le statut",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"statut\": \"en_cours\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/demande-devis/:id/statut",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "demande-devis", ":id", "statut"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Statuts: en_attente, en_cours, validee, annulee"
+					}
+				},
+				{
+					"name": "Supprimer demande",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/demande-devis/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "demande-devis", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Publicités",
+			"item": [
+				{
+					"name": "Liste publicités",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/publicites?isActive=true&grouped=false",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "publicites"],
+							"query": [
+								{
+									"key": "isActive",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "idCategory",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "idProduit",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "grouped",
+									"value": "false",
+									"description": "true → réponse groupée (catégories / articles), non expirées"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get publicité par ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/publicites/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "publicites", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Incrémente aussi nombreVues côté serveur."
+					}
+				},
+				{
+					"name": "Créer publicité (multipart)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "libelle",
+									"value": "Promo été",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Texte de la publicité",
+									"type": "text"
+								},
+								{
+									"key": "dateExpiration",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "idCategory",
+									"value": "",
+									"type": "text",
+									"description": "Renseigner idCategory OU idProduit (pas les deux)"
+								},
+								{
+									"key": "idProduit",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publicites",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "publicites"]
+						}
+					}
+				},
+				{
+					"name": "Modifier publicité (multipart)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "libelle",
+									"value": "Promo été (modifiée)",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "idCategory",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "idProduit",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publicites/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "publicites", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Supprimer publicité",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publicites/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "publicites", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Toggle actif / inactif",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publicites/:id/toggle",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "publicites", ":id", "toggle"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						}
 					}
 				}
 			]
