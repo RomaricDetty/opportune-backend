@@ -87,12 +87,16 @@ class SiteCategoryController {
                     {
                         model: Category,
                         as: 'categories', // Correction ici: remplace 'categoriesElectromenager' par 'categories'
-                        attributes: ['id', 'libelle']
+                        attributes: ['id', 'libelle'],
+                        separate: true,
+                        order: [['createdAt', 'DESC']]
                     },
                     {
                         model: Marque,
                         as: 'marques',
-                        attributes: ['id', 'libelle']
+                        attributes: ['id', 'libelle'],
+                        separate: true,
+                        order: [['createdAt', 'DESC']]
                     }
                 ]
             };
@@ -149,7 +153,7 @@ class SiteCategoryController {
                     isActive: true
                 },
                 attributes: ['id', 'libelle', 'description', 'isActive'],
-                order: [['libelle', 'ASC']]
+                order: [['createdAt', 'DESC']]
             });
 
             // Définir les listes de sous-catégories pour chaque type
@@ -245,12 +249,16 @@ class SiteCategoryController {
                         as: 'categories',
                         attributes: ['id', 'libelle', 'description', 'isActive'],
                         where: { isActive: true },
-                        required: false
+                        required: false,
+                        separate: true,
+                        order: [['createdAt', 'DESC']]
                     },
                     {
                         model: Marque,
                         as: 'marques',
-                        attributes: ['id', 'libelle', 'description', 'logo', 'isActive']
+                        attributes: ['id', 'libelle', 'description', 'logo', 'isActive'],
+                        separate: true,
+                        order: [['createdAt', 'DESC']]
                     }
                 ]
             };

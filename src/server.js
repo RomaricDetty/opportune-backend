@@ -12,8 +12,13 @@ const seedDatabase = require('./scripts/seedDatabase');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// CORS : compatible front (ex. Next sur autre port) avec cookies / Authorization
+app.use(
+    cors({
+        origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()) : true,
+        credentials: true
+    })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -48,10 +53,19 @@ app.get('/', (req, res) => {
         endpoints: {
             health: '/api/health',
             admins: '/api/admins',
+            adminAlias: '/api/admin',
             siteCategories: '/api/site-categories',
             categories: '/api/categories',
             marques: '/api/brands',
-            produits: '/api/products'
+            produits: '/api/products',
+            adminBackOffice: {
+                products: '/api/admin/products',
+                categories: '/api/admin/categories',
+                brands: '/api/admin/brands',
+                siteCategories: '/api/admin/site-categories',
+                demandeDevis: '/api/admin/demande-devis',
+                publicites: '/api/admin/publicites'
+            }
         }
     });
 });

@@ -141,7 +141,8 @@ const swaggerOptions = {
                         },
                         idSiteCategory: {
                             type: 'string',
-                            format: 'uuid'
+                            format: 'uuid',
+                            nullable: true
                         },
                         isActive: {
                             type: 'boolean',
@@ -156,7 +157,7 @@ const swaggerOptions = {
                             format: 'date-time'
                         }
                     },
-                    required: ['libelle', 'idSiteCategory', 'isActive']
+                    required: ['libelle', 'isActive']
                 },
                 CategoryInput: {
                     type: 'object',
@@ -174,6 +175,7 @@ const swaggerOptions = {
                         idSiteCategory: {
                             type: 'string',
                             format: 'uuid',
+                            nullable: true,
                             example: '123e4567-e89b-12d3-a456-426614174000'
                         },
                         isActive: {
@@ -181,7 +183,7 @@ const swaggerOptions = {
                             example: true
                         }
                     },
-                    required: ['libelle', 'idSiteCategory']
+                    required: ['libelle']
                 },
                 ElectroCategoryInput: {
                     type: 'object',

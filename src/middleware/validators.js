@@ -34,21 +34,14 @@ const validateSiteCategory = [
     }
 ];
 
-/**
- * Middleware pour valider les données de Category
- */
-const validateCategory = [
+/** Champs communs à la création / mise à jour d'une Category */
+const categoryBodyRules = [
     body('libelle')
         .trim()
         .notEmpty()
         .withMessage('Le libellé est requis')
         .isLength({ min: 2, max: 100 })
         .withMessage('Le libellé doit contenir entre 2 et 100 caractères'),
-
-    body('isSiteCategory')
-        .optional()
-        .trim(),
-    
 
     body('description')
         .optional()
@@ -57,19 +50,32 @@ const validateCategory = [
     body('isActive')
         .optional()
         .isBoolean()
-        .withMessage('isActive doit être un booléen'),
+        .withMessage('isActive doit être un booléen')
+];
 
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Erreur de validation',
-                errors: errors.array()
-            });
-        }
-        next();
+/** Répond 400 si la chaîne express-validator contient des erreurs */
+const categoryValidationHandler = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            message: 'Erreur de validation',
+            errors: errors.array()
+        });
     }
+    next();
+};
+
+/**
+ * Validation POST / PUT categories — idSiteCategory optionnel (UUID si fourni)
+ */
+const validateCategory = [
+    ...categoryBodyRules,
+    body('idSiteCategory')
+        .optional({ values: 'falsy' })
+        .isUUID()
+        .withMessage('idSiteCategory doit être un UUID valide'),
+    categoryValidationHandler
 ];
 
 /**

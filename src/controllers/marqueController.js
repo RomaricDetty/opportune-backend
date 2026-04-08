@@ -24,7 +24,7 @@ class MarqueController {
                     as: 'siteCategory',
                     attributes: ['id', 'libelle']
                 }],
-                order: [['libelle', 'ASC']]
+                order: [['createdAt', 'DESC']]
             });
 
             return res.status(200).json({
@@ -57,7 +57,9 @@ class MarqueController {
                     {
                         model: Produit,
                         as: 'produits',
-                        attributes: ['id', 'libelle', 'prix', 'isActive', 'isAvailable']
+                        attributes: ['id', 'libelle', 'prix', 'isActive', 'isAvailable'],
+                        separate: true,
+                        order: [['createdAt', 'DESC']]
                     }
                 ]
             });

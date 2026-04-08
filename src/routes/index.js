@@ -8,7 +8,7 @@ const marqueRoutes = require('./marqueRoutes');
 const produitRoutes = require('./produitRoutes');
 const adminRoutes = require('./adminRoutes');
 const demandeDevisRoutes = require('./demandeDevisRoutes');
-const publiciteRoutes = require('./publiciteRoutes')
+const publiciteRoutes = require('./publiciteRoutes');
 /**
  * Configuration centrale de toutes les routes de l'API
  * Préfixe général : /api
@@ -16,6 +16,17 @@ const publiciteRoutes = require('./publiciteRoutes')
 
 // Routes pour les administrateurs
 router.use('/admins', adminRoutes);
+
+// Back-office : chemins /admin/* AVANT /admin (sinon « products » est pris pour :id)
+router.use('/admin/products', authenticate, produitRoutes);
+router.use('/admin/categories', authenticate, categoryRoutes);
+router.use('/admin/brands', authenticate, marqueRoutes);
+router.use('/admin/site-categories', authenticate, siteCategoryRoutes);
+router.use('/admin/demande-devis', demandeDevisRoutes);
+router.use('/admin/publicites', authenticate, publiciteRoutes);
+// Alias /admin (singulier) : login, CRUD admins — après les préfixes ci-dessus
+router.use('/admin', adminRoutes);
+
 // Routes pour les catégories principales
 router.use('/site-categories', siteCategoryRoutes);
 // Routes pour les catégories
@@ -28,8 +39,8 @@ router.use('/products', produitRoutes);
 // Routes pour les demandes de devis
 router.use('/demande-devis', demandeDevisRoutes);
 
-// Routes pour les publicites 
-router.use('/publicites', publiciteRoutes)
+// Routes pour les publicites
+router.use('/publicites', publiciteRoutes);
 /**
  * @swagger
  * /health:

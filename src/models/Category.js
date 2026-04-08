@@ -40,11 +40,6 @@ const Category = sequelize.define('Category', {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
     },
-    isSiteCategory : {
-    type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
     isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
@@ -69,17 +64,17 @@ const Category = sequelize.define('Category', {
 /**
  * Category belongs to SiteCategory
  */
-Category.belongsTo(SiteCategory, {
-    foreignKey: 'idSiteCategory',
-    as: 'siteCategory'
-});
+// Category.belongsTo(SiteCategory, {
+//     foreignKey: 'idSiteCategory',
+//     as: 'siteCategory'
+// });
 
 /**
  * SiteCategory has many Categories
  */
-SiteCategory.hasMany(Category, {
-    foreignKey: 'idSiteCategory',
-    as: 'categories'
-});
+// SiteCategory.hasMany(Category, {
+//     foreignKey: 'idSiteCategory',
+//     as: 'categories'
+// });
 
 module.exports = Category;

@@ -71,6 +71,7 @@ class AdminController {
             return res.status(200).json({
                 success: true,
                 message: 'Authentification réussie',
+                token,
                 data: {
                     token,
                     admin: {

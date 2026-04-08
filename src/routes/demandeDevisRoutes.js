@@ -167,6 +167,15 @@ router.post('/', DemandeDevisController.create);
 
 /**
  * @swagger
+ * /demande-devis/updateStatut/{id}:
+ *   put:
+ *     summary: Mettre à jour le statut (alias historique)
+ *     tags: [DemandeDevis]
+ */
+router.put('/updateStatut/:id', authenticate, DemandeDevisController.updateStatut);
+
+/**
+ * @swagger
  * /demande-devis/{id}/statut:
  *   put:
  *     summary: Mettre à jour le statut d'une demande de devis
@@ -200,6 +209,7 @@ router.post('/', DemandeDevisController.create);
  *         description: Demande de devis non trouvée
  */
 router.put('/:id/statut', authenticate, DemandeDevisController.updateStatut);
+router.patch('/:id/statut', authenticate, DemandeDevisController.updateStatut);
 
 /**
  * @swagger

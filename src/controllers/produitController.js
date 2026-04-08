@@ -64,61 +64,62 @@ class ProduitController {
      * Récupérer tous les produits page d'accueil
      * GET /api/produits/getAllHomeProduct
      */
-   static async getAllHomeProduct(req, res) {
-    try {
-        const categories = await Category.findAll({
-            where: { isSiteCategory: true },
-            attributes: ['id', 'libelle']
-        });
-
-        const result = [];
-
-        for (const category of categories) {
-            const produits = await Produit.findAll({
-                where: { idCategory: category.id },
-                include: [
-                    {
-                        model: Marque,
-                        as: 'marque',
-                        attributes: ['id', 'libelle', 'logo'],
-                        include: [{
-                            model: SiteCategory,
-                            as: 'siteCategory',
-                            attributes: ['id', 'libelle']
-                        }]
-                    },
-                    {
-                        model: Category,
-                        as: 'category',
-                        attributes: ['id', 'libelle']
-                    }
-                ],
-                order: [['createdAt', 'DESC']],
-                limit: 4
+    static async getAllHomeProduct(req, res) {
+        try {
+            const siteCategories = await SiteCategory.findAll({
+                where: { isActive: true },
+                attributes: ['id', 'libelle'],
+                order: [['createdAt', 'DESC']]
             });
 
-            if (produits.length > 0) {
-                result.push({
-                    categoryId: category.id,
-                    category: category.libelle,
-                    produits: produits
+            const result = [];
+
+            for (const siteCategory of siteCategories) {
+                const produits = await Produit.findAll({
+                    include: [
+                        {
+                            model: Marque,
+                            as: 'marque',
+                            attributes: ['id', 'libelle', 'logo'],
+                            include: [{
+                                model: SiteCategory,
+                                as: 'siteCategory',
+                                attributes: ['id', 'libelle']
+                            }]
+                        },
+                        {
+                            model: Category,
+                            as: 'category',
+                            attributes: ['id', 'libelle'],
+                            where: { idSiteCategory: siteCategory.id },
+                            required: true
+                        }
+                    ],
+                    order: [['createdAt', 'DESC']],
+                    limit: 4
                 });
+
+                if (produits.length > 0) {
+                    result.push({
+                        categoryId: siteCategory.id,
+                        category: siteCategory.libelle,
+                        produits
+                    });
+                }
             }
+
+            return res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            console.error('Erreur récupération Produits:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Erreur lors de la récupération des produits'
+            });
         }
-
-        return res.status(200).json({
-            success: true,
-            data: result
-        });
-
-    } catch (error) {
-        console.error('Erreur récupération Produits:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la récupération des produits'
-        });
     }
-}
 
 /**
      * Mettre à jour nombre de vue un produit par ID
