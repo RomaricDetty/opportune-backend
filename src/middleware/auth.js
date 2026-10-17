@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { Admin } = require('../models');
+const { getJwtSecret } = require('../config/jwt');
 
 /**
  * Middleware d'authentification par Bearer token
@@ -35,8 +36,14 @@ const authenticate = async (req, res, next) => {
         }
 
         // Vérifier et décoder le token
-        const JWT_SECRET = process.env.JWT_SECRET || '1ts@opportune-$ecret-k3y_f4r==projEct-ch@nge-in-p@';
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, getJwtSecret());
+
+        if (decoded.role && decoded.role !== 'admin') {
+            return res.status(401).json({
+                success: false,
+                message: 'Token non valide pour un administrateur'
+            });
+        }
 
         // Récupérer l'admin depuis la base de données
         const admin = await Admin.findByPk(decoded.id, {

@@ -9,6 +9,18 @@ const produitRoutes = require('./produitRoutes');
 const adminRoutes = require('./adminRoutes');
 const demandeDevisRoutes = require('./demandeDevisRoutes');
 const publiciteRoutes = require('./publiciteRoutes');
+const clientRoutes = require('./clientRoutes');
+const wishlistRoutes = require('./wishlistRoutes');
+const orderRoutes = require('./orderRoutes');
+const adminOrderRoutes = require('./adminOrderRoutes');
+const adminClientRoutes = require('./adminClientRoutes');
+const dashboardRoutes = require('./dashboardRoutes');
+const contactRoutes = require('./contactRoutes');
+const SettingsController = require('../controllers/settingsController');
+const { upload } = require('../middleware/upload');
+
+const uploadLogo = upload.single('logo');
+
 /**
  * Configuration centrale de toutes les routes de l'API
  * Préfixe général : /api
@@ -22,25 +34,44 @@ router.use('/admin/products', authenticate, produitRoutes);
 router.use('/admin/categories', authenticate, categoryRoutes);
 router.use('/admin/brands', authenticate, marqueRoutes);
 router.use('/admin/site-categories', authenticate, siteCategoryRoutes);
+router.use('/admin/orders', adminOrderRoutes);
+router.use('/admin/clients', adminClientRoutes);
+router.use('/admin/dashboard', dashboardRoutes);
 router.use('/admin/demande-devis', demandeDevisRoutes);
 router.use('/admin/publicites', authenticate, publiciteRoutes);
+router.use('/admin/contact', contactRoutes);
+router.get('/admin/settings', authenticate, SettingsController.getAdmin);
+router.put(
+    '/admin/settings',
+    authenticate,
+    (req, res, next) => {
+        uploadLogo(req, res, (err) => {
+            if (err) {
+                return res.status(400).json({
+                    success: false,
+                    message: err.message || 'Erreur upload logo',
+                });
+            }
+            return next();
+        });
+    },
+    SettingsController.update,
+);
 // Alias /admin (singulier) : login, CRUD admins — après les préfixes ci-dessus
 router.use('/admin', adminRoutes);
 
-// Routes pour les catégories principales
+// Routes publiques / client
+router.get('/settings', SettingsController.getPublic);
 router.use('/site-categories', siteCategoryRoutes);
-// Routes pour les catégories
 router.use('/categories', categoryRoutes);
-// Routes pour les marques
 router.use('/brands', marqueRoutes);
-// Routes pour les produits
 router.use('/products', produitRoutes);
-
-// Routes pour les demandes de devis
+router.use('/clients', clientRoutes);
+router.use('/wishlist', wishlistRoutes);
+router.use('/orders', orderRoutes);
 router.use('/demande-devis', demandeDevisRoutes);
-
-// Routes pour les publicites
 router.use('/publicites', publiciteRoutes);
+router.use('/contact', contactRoutes);
 /**
  * @swagger
  * /health:

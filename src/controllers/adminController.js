@@ -1,6 +1,7 @@
 const { Admin } = require('../models');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
+const { getJwtSecret, getJwtExpiresIn } = require('../config/jwt');
 
 /**
  * Controller pour la gestion des administrateurs
@@ -56,16 +57,14 @@ class AdminController {
             await admin.save();
 
             // Générer le token JWT
-            const JWT_SECRET = process.env.JWT_SECRET || '1ts@opportune-$ecret-k3y_f4r==projEct-ch@nge-in-p@';
-            const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
-            
             const token = jwt.sign(
-                { 
+                {
                     id: admin.id,
-                    login: admin.login
+                    login: admin.login,
+                    role: 'admin',
                 },
-                JWT_SECRET,
-                { expiresIn: JWT_EXPIRES_IN }
+                getJwtSecret(),
+                { expiresIn: getJwtExpiresIn() }
             );
 
             return res.status(200).json({

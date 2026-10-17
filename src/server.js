@@ -1,41 +1,58 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 require('dotenv').config();
 
 const { syncModels } = require('./models');
 const routes = require('./routes');
+const { apiLimiter } = require('./middleware/rateLimiters');
 const seedDatabase = require('./scripts/seedDatabase');
 
 // Créer l'application Express
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === 'production';
 
-// CORS : compatible front (ex. Next sur autre port) avec cookies / Authorization
+app.disable('x-powered-by');
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+        contentSecurityPolicy: false,
+    }),
+);
+
+// CORS : origines explicites en prod, permissif en dev
+const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
+    : null;
 app.use(
     cors({
-        origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()) : true,
-        credentials: true
-    })
+        origin: corsOrigins && corsOrigins.length ? corsOrigins : !isProd,
+        credentials: true,
+    }),
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use('/api', apiLimiter);
 
 // Middleware pour logger les requêtes (en développement)
-if (process.env.NODE_ENV === 'development') {
+if (!isProd) {
     app.use((req, res, next) => {
         console.log(`${req.method} ${req.path}`);
         next();
     });
 }
 
-// Configuration Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'API Opportune - Documentation',
-    customfavIcon: '/favicon.ico'
-}));
+// Swagger uniquement hors production
+if (!isProd) {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'API Opportune - Documentation',
+        customfavIcon: '/favicon.ico'
+    }));
+}
 
 // Servir les fichiers statiques (uploads)
 app.use('/uploads', express.static('uploads'));
@@ -58,11 +75,16 @@ app.get('/', (req, res) => {
             categories: '/api/categories',
             marques: '/api/brands',
             produits: '/api/products',
+            clients: '/api/clients',
+            wishlist: '/api/wishlist',
+            orders: '/api/orders',
             adminBackOffice: {
                 products: '/api/admin/products',
                 categories: '/api/admin/categories',
                 brands: '/api/admin/brands',
                 siteCategories: '/api/admin/site-categories',
+                orders: '/api/admin/orders',
+                clients: '/api/admin/clients',
                 demandeDevis: '/api/admin/demande-devis',
                 publicites: '/api/admin/publicites'
             }
@@ -75,8 +97,8 @@ app.use((err, req, res, next) => {
     console.error('Erreur:', err);
     res.status(err.status || 500).json({
         success: false,
-        message: err.message || 'Erreur interne du serveur',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        message: isProd ? 'Erreur interne du serveur' : (err.message || 'Erreur interne du serveur'),
+        ...(!isProd && { stack: err.stack })
     });
 });
 

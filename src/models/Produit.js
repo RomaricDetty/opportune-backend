@@ -43,14 +43,26 @@ const Produit = sequelize.define('Produit', {
         }
     },
     prix: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.INTEGER,
         allowNull: true,
+        comment: 'Prix en XOF (FCFA)',
         validate: {
             min: {
                 args: [0],
                 msg: 'Le prix ne peut pas être négatif'
             }
         }
+    },
+    remise: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'Remise en pourcentage'
+    },
+    devise: {
+        type: DataTypes.STRING(3),
+        allowNull: false,
+        defaultValue: 'XOF'
     },
     quantite_stock: {
         type: DataTypes.INTEGER,

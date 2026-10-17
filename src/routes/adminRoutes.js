@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const AdminController = require('../controllers/adminController');
 const authenticate = require('../middleware/auth');
+const { adminLoginLimiter } = require('../middleware/rateLimiters');
 
 /**
  * @swagger
@@ -56,7 +57,7 @@ const authenticate = require('../middleware/auth');
  *       403:
  *         description: Compte désactivé
  */
-router.post('/login', AdminController.login);
+router.post('/login', adminLoginLimiter, AdminController.login);
 
 /**
  * @swagger

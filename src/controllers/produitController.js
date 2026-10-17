@@ -12,7 +12,19 @@ class ProduitController {
      */
     static async getAll(req, res) {
         try {
-            const { idMarque, idCategory, isActive, isAvailable, minPrice, maxPrice, libelle } = req.query;
+            const {
+                idMarque,
+                idCategory,
+                idSiteCategory,
+                isActive,
+                isAvailable,
+                minPrice,
+                maxPrice,
+                libelle,
+                page,
+                limit,
+                sort
+            } = req.query;
             const where = {};
             if (idMarque) where.idMarque = idMarque;
             if (libelle) where.libelle = { [Op.like]: `%${libelle}%` };
@@ -24,28 +36,71 @@ class ProduitController {
                 if (minPrice) where.prix[Op.gte] = parseFloat(minPrice);
                 if (maxPrice) where.prix[Op.lte] = parseFloat(maxPrice);
             }
+            const categoryInclude = {
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'libelle', 'idSiteCategory'],
+                required: Boolean(idSiteCategory),
+                ...(idSiteCategory ? { where: { idSiteCategory } } : {})
+            };
+            const include = [
+                {
+                    model: Marque,
+                    as: 'marque',
+                    attributes: ['id', 'libelle', 'logo'],
+                    include: [{
+                        model: SiteCategory,
+                        as: 'siteCategory',
+                        attributes: ['id', 'libelle']
+                    }]
+                },
+                categoryInclude
+            ];
+            const sortMap = {
+                newest: [['createdAt', 'DESC']],
+                price_asc: [['prix', 'ASC']],
+                price_desc: [['prix', 'DESC']],
+                name_asc: [['libelle', 'ASC']]
+            };
+            const order = sortMap[sort] || sortMap.newest;
+
+            const pageNum = parseInt(page, 10);
+            const usePagination = Number.isFinite(pageNum) && pageNum > 0;
+
+            if (usePagination) {
+                const parsedLimit = parseInt(limit, 10);
+                const pageSize = Number.isFinite(parsedLimit) && parsedLimit > 0
+                    ? Math.min(parsedLimit, 48)
+                    : 12;
+                const offset = (pageNum - 1) * pageSize;
+
+                const { count, rows } = await Produit.findAndCountAll({
+                    where,
+                    include,
+                    order,
+                    limit: pageSize,
+                    offset,
+                    distinct: true
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    data: rows,
+                    pagination: {
+                        total: count,
+                        page: pageNum,
+                        limit: pageSize,
+                        totalPages: Math.max(1, Math.ceil(count / pageSize))
+                    }
+                });
+            }
+
             const produits = await Produit.findAll({
                 where,
-                include: [
-                    {
-                        model: Marque,
-                        as: 'marque',
-                        attributes: ['id', 'libelle', 'logo'],
-                        include: [{
-                            model: SiteCategory,
-                            as: 'siteCategory',
-                            attributes: ['id', 'libelle']
-                        }]
-                    },
-                    {
-                        model: Category,
-                        as: 'category',
-                        attributes: ['id', 'libelle']
-                    }
-                ],
-                order: [['createdAt', 'DESC']]
+                include,
+                order
             });
-            
+
             return res.status(200).json({
                 success: true,
                 data: produits
@@ -423,7 +478,7 @@ static async incrementViews(req, res) {
 
             // Extraire les images depuis req.files (fichiers uploadés) ou req.body (base64)
             let mainImageToProcess = undefined;
-            let imagesToProcess = undefined;
+            let newSecondaryImages = [];
 
             // Priorité aux fichiers uploadés (req.files)
             if (req.files) {
@@ -432,9 +487,9 @@ static async incrementViews(req, res) {
                     const file = req.files.imagePrincipale[0];
                     mainImageToProcess = ImageHandler.processMainImage(file.buffer, file.mimetype);
                 }
-                // Images supplémentaires depuis fichiers uploadés
+                // Nouvelles images secondaires (ajoutées sans remplacer les existantes)
                 if (req.files.images && req.files.images.length > 0) {
-                    imagesToProcess = req.files.images.map(file => 
+                    newSecondaryImages = req.files.images.map(file =>
                         ImageHandler.processMainImage(file.buffer, file.mimetype)
                     );
                 }
@@ -444,18 +499,42 @@ static async incrementViews(req, res) {
             if (mainImageToProcess === undefined && imagePrincipale !== undefined) {
                 mainImageToProcess = imagePrincipale;
             }
-            if (imagesToProcess === undefined && images !== undefined) {
-                imagesToProcess = images;
-            }
 
             // Traiter les images (base64 ou fichiers) si fournies
-            let processedMainImage = mainImageToProcess !== undefined 
-                ? ImageHandler.processMainImage(mainImageToProcess) 
+            let processedMainImage = mainImageToProcess !== undefined
+                ? ImageHandler.processMainImage(mainImageToProcess)
                 : produit.imagePrincipale;
-            
-            let processedImages = imagesToProcess !== undefined 
-                ? ImageHandler.processImagesArray(imagesToProcess) 
-                : produit.images;
+
+            /**
+             * Fusionne images conservées + nouvelles.
+             * `keepImages` = URLs encore présentes côté admin (après suppressions locales).
+             */
+            let keepImages;
+            if (req.body.keepImages !== undefined) {
+                try {
+                    keepImages = typeof req.body.keepImages === 'string'
+                        ? JSON.parse(req.body.keepImages)
+                        : req.body.keepImages;
+                } catch {
+                    keepImages = [];
+                }
+            }
+
+            let processedImages = produit.images || [];
+            if (Array.isArray(keepImages) || newSecondaryImages.length > 0) {
+                const retained = Array.isArray(keepImages)
+                    ? keepImages.filter(Boolean)
+                    : (Array.isArray(produit.images) ? produit.images : []);
+                const added = ImageHandler.processImagesArray(newSecondaryImages);
+                processedImages = [...retained, ...added];
+            } else if (images !== undefined) {
+                try {
+                    const parsedImages = typeof images === 'string' ? JSON.parse(images) : images;
+                    processedImages = ImageHandler.processImagesArray(parsedImages);
+                } catch {
+                    processedImages = produit.images || [];
+                }
+            }
 
             // Valider les images base64 si présentes
             if (processedMainImage && ImageHandler.isBase64(processedMainImage)) {
