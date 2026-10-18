@@ -147,9 +147,15 @@ const startServer = async () => {
         // En production, utilisez les migrations au lieu de sync()
         await syncModels(false);
 
-        // Exécuter le seeding de la base de données
-        // console.log('Exécution du seeding de la base de données...');
-        // await seedDatabase();
+        // Seed auto si base vide (SEED_ON_EMPTY=1) — utile au premier déploiement
+        if (process.env.SEED_ON_EMPTY === '1') {
+            const { Admin } = require('./models');
+            const adminCount = await Admin.count({ paranoid: false });
+            if (adminCount === 0) {
+                console.log('[seed] Base vide — insertion des données de démo...');
+                await seedDatabase();
+            }
+        }
 
         // Démarrer le serveur
         app.listen(PORT, () => {
