@@ -23,14 +23,52 @@ app.use(
     }),
 );
 
-// CORS : origines explicites en prod, permissif en dev
+/**
+ * Normalise une origine pour la comparaison CORS.
+ * @param {string} origin
+ * @returns {string}
+ */
+function normalizeOrigin(origin) {
+    return String(origin || '')
+        .trim()
+        .replace(/\/$/, '')
+        .toLowerCase();
+}
+
+// CORS : origines explicites (CORS_ORIGIN), permissif en dev si non défini
 const corsOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
-    : null;
+    ? process.env.CORS_ORIGIN.split(',').map((s) => normalizeOrigin(s)).filter(Boolean)
+    : [];
+const allowedOrigins = new Set(corsOrigins);
+
+if (isProd && allowedOrigins.size === 0) {
+    console.warn(
+        '[CORS] CORS_ORIGIN est vide en production : les requêtes cross-origin seront refusées.',
+    );
+}
+
 app.use(
     cors({
-        origin: corsOrigins && corsOrigins.length ? corsOrigins : !isProd,
+        origin(origin, callback) {
+            // Pas d'Origin = requêtes same-origin / outils serveur
+            if (!origin) return callback(null, true);
+
+            const normalized = normalizeOrigin(origin);
+
+            if (allowedOrigins.size > 0) {
+                if (allowedOrigins.has(normalized)) return callback(null, true);
+                console.warn(`[CORS] Origin refusée: ${origin}`);
+                return callback(null, false);
+            }
+
+            // Dev sans liste : autoriser
+            if (!isProd) return callback(null, true);
+
+            return callback(null, false);
+        },
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
     }),
 );
 app.use(express.json({ limit: '1mb' }));
