@@ -14,7 +14,7 @@ module.exports = {
         },
         {
             "login": "romdja",
-            "passwordHash": "$2b$10$YehWSJSbCNgrQTck1CiM2OxGn44q52gmeW4m3csoNY7kZL9j7DNm6",
+            "passwordHash": "$2b$10$boH5SHJpsJU.Yt/ihOeZouoGzawbtImpxDAgcWbfjpKePs2LrnW4m",
             "nom": "GUEU",
             "prenom": "Detty",
             "email": "romaricdetty@gmail.com",
@@ -407,7 +407,8 @@ module.exports = {
             ],
             "isActive": true,
             "category": "Android",
-            "produit": null
+            "produit": null,
+            "emplacement": "hero"
         },
         {
             "libelle": "TV 4K en stock",
@@ -417,7 +418,8 @@ module.exports = {
             ],
             "isActive": true,
             "category": null,
-            "produit": "Hisense TV 65\" QLED Connectée"
+            "produit": "Hisense TV 65\" QLED Connectée",
+            "emplacement": "hero"
         }
     ]
 };

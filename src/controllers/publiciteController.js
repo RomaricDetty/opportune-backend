@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { Produit, Publicite, Category} = require('../models');
 
 const ImageHandler = require('../utils/imageHandler');
+const { normalizeAdSlot, normalizeExpiration } = require('../constants/adSlots');
 
 /**
  * Controller pour la gestion des publicités
@@ -16,13 +17,14 @@ class PubliciteController {
  */
 static async getAll(req, res) {
     try {
-        const { isActive, idCategory, idProduit, search, grouped } = req.query;
+        const { isActive, idCategory, idProduit, search, grouped, emplacement } = req.query;
 
         const where = {};
 
         if (isActive   !== undefined) where.isActive   = isActive === 'true';
         if (idCategory !== undefined) where.idCategory = idCategory;
         if (idProduit  !== undefined) where.idProduit  = idProduit;
+        if (emplacement) where.emplacement = normalizeAdSlot(emplacement);
         if (search) {
             where.libelle = { [Op.like]: `%${search}%` };
         }
@@ -121,7 +123,8 @@ static async getAll(req, res) {
             dateExpiration,
             isActive,
             idCategory,
-            idProduit
+            idProduit,
+            emplacement
         } = req.body;
 
         // ─── Validation association ───────────────────────────────────────
@@ -177,8 +180,9 @@ static async getAll(req, res) {
             libelle,
             description,
             images:         processedImage ? JSON.stringify([processedImage]) : null,
-            dateExpiration: dateExpiration || null,
+            dateExpiration: normalizeExpiration(dateExpiration) ?? null,
             isActive:       isActive !== undefined ? isActive : true,
+            emplacement:    normalizeAdSlot(emplacement),
             idCategory:     hasCategory ? idCategory : null,
             idProduit:      hasProduit  ? idProduit  : null
         });
@@ -214,11 +218,11 @@ static async getAll(req, res) {
             const {
                 libelle,
                 description,
-                images,
                 dateExpiration,
                 isActive,
                 idCategory,
-                idProduit
+                idProduit,
+                emplacement
             } = req.body;
 
             const publicite = await Publicite.findByPk(id);
@@ -253,41 +257,31 @@ static async getAll(req, res) {
                 });
             }
 
-            // ─── Traitement image ─────────────────────────────────────────────
-            let imagesToProcess = undefined;
-
-            if (req.files && req.files.length > 0) {
-                imagesToProcess = req.files.map(file =>
-                    ImageHandler.processMainImage(file.buffer, file.mimetype)
-                );
-            }
-
-            if (imagesToProcess === undefined && images !== undefined) {
-                imagesToProcess = images;
-            }
-
-            const processedImages = imagesToProcess !== undefined
-                ? ImageHandler.processImagesArray(imagesToProcess)
-                : publicite.images; // ← conserve les images existantes si rien envoyé
-
-            for (const img of processedImages) {
-                if (img && ImageHandler.isBase64(img)) {
-                    if (!ImageHandler.validateBase64(img)) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Format d\'image invalide. Utilisez base64 (jpeg, jpg, png, gif, webp)'
-                        });
-                    }
+            let nextImages = publicite.images;
+            if (req.file) {
+                const base64 = ImageHandler.processMainImage(req.file.buffer, req.file.mimetype);
+                if (!ImageHandler.validateBase64(base64)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Format d\'image invalide. Utilisez base64 (jpeg, jpg, png, gif, webp)'
+                    });
                 }
+                nextImages = JSON.stringify([base64]);
             }
 
-            // ─── Mise à jour ──────────────────────────────────────────────────
+            const nextExpiration = dateExpiration !== undefined
+                ? normalizeExpiration(dateExpiration)
+                : publicite.dateExpiration;
+
             await publicite.update({
                 libelle:        libelle        ?? publicite.libelle,
                 description:    description    ?? publicite.description,
-                images:         processedImages,
-                dateExpiration: dateExpiration ?? publicite.dateExpiration,
+                images:         nextImages,
+                dateExpiration: nextExpiration,
                 isActive:       isActive       ?? publicite.isActive,
+                emplacement:    emplacement !== undefined
+                    ? normalizeAdSlot(emplacement)
+                    : publicite.emplacement,
                 idCategory:     hasCategory ? newIdCategory : null,
                 idProduit:      hasProduit  ? newIdProduit  : null
             });

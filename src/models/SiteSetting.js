@@ -22,6 +22,30 @@ const SiteSetting = sequelize.define(
             type: DataTypes.TEXT('long'),
             allowNull: true,
         },
+        facebookUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+        },
+        instagramUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+        },
+        tiktokUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+        },
+        youtubeUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+        },
+        twitterUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+        },
+        linkedinUrl: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+        },
     },
     {
         tableName: 'site_settings',

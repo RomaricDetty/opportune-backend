@@ -1,5 +1,6 @@
 const { SiteSetting } = require('../models');
 const ImageHandler = require('../utils/imageHandler');
+const { pickSocialUpdates, toPublicSocials } = require('../constants/socialNetworks');
 
 /**
  * Récupère (ou crée) la ligne unique de paramètres.
@@ -32,6 +33,7 @@ class SettingsController {
                 data: {
                     siteName: settings.siteName,
                     logo: settings.logo || null,
+                    socials: toPublicSocials(settings),
                 },
             });
         } catch (error) {
@@ -82,6 +84,15 @@ class SettingsController {
             } else if (req.body.removeLogo === 'true' || req.body.removeLogo === true) {
                 updates.logo = null;
             }
+
+            const { updates: socialUpdates, errors: socialErrors } = pickSocialUpdates(req.body);
+            if (socialErrors.length) {
+                return res.status(400).json({
+                    success: false,
+                    message: socialErrors[0],
+                });
+            }
+            Object.assign(updates, socialUpdates);
 
             await settings.update(updates);
 

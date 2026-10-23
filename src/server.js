@@ -145,7 +145,11 @@ const startServer = async () => {
     try {
         // Synchroniser les modèles avec la base de données
         // En production, utilisez les migrations au lieu de sync()
-        await syncModels(false);
+        try {
+            await syncModels(false);
+        } catch (syncError) {
+            console.error('Synchronisation Sequelize incomplète, démarrage quand même:', syncError.message);
+        }
 
         // Seed auto si base vide (SEED_ON_EMPTY=1) — utile au premier déploiement
         if (process.env.SEED_ON_EMPTY === '1') {

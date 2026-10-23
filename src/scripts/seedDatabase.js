@@ -165,6 +165,7 @@ const seedDatabase = async () => {
                     isActive: p.isActive,
                     idCategory: p.category ? catMap[p.category]?.id : null,
                     idProduit: p.produit ? produitMap[p.produit]?.id : null,
+                    emplacement: p.emplacement || 'hero',
                 })),
                 { transaction },
             );

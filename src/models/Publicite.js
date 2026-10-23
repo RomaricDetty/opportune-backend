@@ -49,6 +49,17 @@ const Publicite = sequelize.define('Publicite', {
         defaultValue: true,
         allowNull: false
     },
+    emplacement: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'hero',
+        validate: {
+            isIn: {
+                args: [['hero', 'home_mid', 'home_bottom']],
+                msg: 'Emplacement invalide',
+            },
+        },
+    },
 
     // ─── Clés étrangères optionnelles (l'une ou l'autre) ───────────────────────
     idCategory: {
@@ -79,7 +90,8 @@ const Publicite = sequelize.define('Publicite', {
     indexes: [
         { fields: ['idCategory'] },
         { fields: ['idProduit'] },
-        { fields: ['dateExpiration'] }
+        { fields: ['dateExpiration'] },
+        { fields: ['emplacement'] },
     ],
     validate: {
         /**
