@@ -59,10 +59,16 @@ const models = {
 
 /**
  * Synchronise toutes les tables selon les modèles.
+ * En production le schéma est géré par les migrations (pas de alter).
  * @param {boolean} [force=false] - Recrée les tables si true
  */
 const syncModels = async (force = false) => {
     try {
+        if (process.env.NODE_ENV === 'production' && !force) {
+            await sequelize.authenticate();
+            console.log('Connexion DB OK (production : schéma via migrations)');
+            return;
+        }
         await sequelize.sync({ force, alter: !force });
         console.log(`Tables synchronisées ${force ? '(recréées)' : '(mise à jour)'}`);
     } catch (error) {

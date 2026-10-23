@@ -26,7 +26,23 @@ module.exports = {
             createdAt: { type: Sequelize.DATE, allowNull: false },
             updatedAt: { type: Sequelize.DATE, allowNull: false }
         });
-        await queryInterface.addIndex('wishlists', ['idClient', 'idProduit'], { unique: true });
+
+        const wishlistUniqueIndex = 'wishlists_id_client_id_produit';
+        try {
+            const indexes = await queryInterface.showIndex('wishlists');
+            const alreadyExists = indexes.some((idx) => idx.name === wishlistUniqueIndex);
+            if (!alreadyExists) {
+                await queryInterface.addIndex('wishlists', ['idClient', 'idProduit'], {
+                    unique: true,
+                    name: wishlistUniqueIndex
+                });
+            }
+        } catch (error) {
+            const code = error?.original?.code || error?.parent?.code;
+            if (code !== 'ER_DUP_KEYNAME' && !String(error.message || '').includes('Duplicate key')) {
+                throw error;
+            }
+        }
 
         await queryInterface.createTable('orders', {
             id: { type: Sequelize.UUID, primaryKey: true, allowNull: false },
