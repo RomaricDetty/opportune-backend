@@ -1,10 +1,11 @@
 const express = require('express');
 const ClientController = require('../controllers/clientController');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
-router.use(authenticate);
+router.use(authenticate, requirePermission('orders'));
 router.get('/', ClientController.getAll);
 router.put('/:id/status', ClientController.updateStatus);
 

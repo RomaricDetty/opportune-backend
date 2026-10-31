@@ -2,6 +2,7 @@ const { Admin } = require('../models');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { getJwtSecret, getJwtExpiresIn } = require('../config/jwt');
+const { permissionsOf, ROLES } = require('../middleware/permissions');
 
 /**
  * Controller pour la gestion des administrateurs
@@ -79,6 +80,8 @@ class AdminController {
                         nom: admin.nom,
                         prenom: admin.prenom,
                         email: admin.email,
+                        role: admin.role,
+                        permissions: permissionsOf(admin.role),
                         isActive: admin.isActive,
                         lastLogin: admin.lastLogin
                     }
@@ -99,7 +102,11 @@ class AdminController {
      */
     static async create(req, res) {
         try {
-            const { login, password, nom, prenom, email, isActive } = req.body;
+            const { login, password, nom, prenom, email, isActive, role } = req.body;
+
+            if (role !== undefined && !ROLES.includes(role)) {
+                return res.status(400).json({ success: false, message: 'Rôle invalide' });
+            }
 
             // Validation des données requises
             if (!login || !password) {
@@ -128,6 +135,7 @@ class AdminController {
                 nom: nom || null,
                 prenom: prenom || null,
                 email: email || null,
+                role: role || 'admin',
                 isActive: isActive !== undefined ? isActive : true
             });
 
@@ -225,7 +233,16 @@ class AdminController {
     static async update(req, res) {
         try {
             const { id } = req.params;
-            const { login, password, nom, prenom, email, isActive } = req.body;
+            const { login, password, nom, prenom, email, isActive, role } = req.body;
+
+            if (role !== undefined && !ROLES.includes(role)) {
+                return res.status(400).json({ success: false, message: 'Rôle invalide' });
+            }
+
+            // Évite de perdre tout accès à la gestion des comptes.
+            if (id === req.admin.id && ((role !== undefined && role !== 'admin') || isActive === false)) {
+                return res.status(400).json({ success: false, message: 'Vous ne pouvez ni changer votre rôle ni désactiver votre propre compte' });
+            }
 
             const admin = await Admin.findByPk(id);
 
@@ -260,6 +277,7 @@ class AdminController {
             if (prenom !== undefined) admin.prenom = prenom;
             if (email !== undefined) admin.email = email;
             if (isActive !== undefined) admin.isActive = isActive;
+            if (role !== undefined) admin.role = role;
 
             await admin.save();
 
@@ -272,6 +290,7 @@ class AdminController {
                     nom: admin.nom,
                     prenom: admin.prenom,
                     email: admin.email,
+                    role: admin.role,
                     isActive: admin.isActive,
                     lastLogin: admin.lastLogin,
                     updatedAt: admin.updatedAt

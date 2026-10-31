@@ -1,5 +1,16 @@
 const { Marque, SiteCategory, Produit } = require('../models');
 const { Op } = require('sequelize');
+const ImageHandler = require('../utils/imageHandler');
+
+const DUPLICATE_MESSAGE = 'Une marque porte déjà ce nom';
+
+/**
+ * Vérifie qu'un rayon facultatif existe.
+ * @param {string|null|undefined} idSiteCategory
+ * @returns {Promise<boolean>} true si le rayon est absent ou existant
+ */
+const rayonIsValid = async (idSiteCategory) =>
+    !idSiteCategory || Boolean(await SiteCategory.findByPk(idSiteCategory));
 
 /**
  * Controller pour la gestion des marques
@@ -92,35 +103,28 @@ class MarqueController {
         try {
             const { libelle, description, logo, idSiteCategory, isActive } = req.body;
 
-            // Vérifier si la marque existe déjà pour cette catégorie
-            const existingMarque = await Marque.findOne({
-                where: {
-                    libelle,
-                    idSiteCategory
-                }
-            });
-
+            const existingMarque = await Marque.findOne({ where: { libelle } });
             if (existingMarque) {
                 return res.status(409).json({
                     success: false,
-                    message: 'Une marque avec ce libellé existe déjà pour cette catégorie'
+                    message: DUPLICATE_MESSAGE
                 });
             }
 
-            // Vérifier que la catégorie principale existe
-            const siteCategory = await SiteCategory.findByPk(idSiteCategory);
-            if (!siteCategory) {
+            if (!(await rayonIsValid(idSiteCategory))) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Catégorie principale non trouvée'
+                    message: 'Rayon non trouvé'
                 });
             }
 
             const marque = await Marque.create({
                 libelle,
                 description,
-                logo,
-                idSiteCategory,
+                logo: req.file
+                    ? ImageHandler.processMainImage(req.file.buffer, req.file.mimetype)
+                    : logo,
+                idSiteCategory: idSiteCategory || null,
                 isActive: isActive !== undefined ? isActive : true
             });
 
@@ -131,11 +135,11 @@ class MarqueController {
             });
         } catch (error) {
             console.error('Erreur création Marque:', error);
-            
+
             if (error.name === 'SequelizeUniqueConstraintError') {
                 return res.status(409).json({
                     success: false,
-                    message: 'Une marque avec ce libellé existe déjà pour cette catégorie'
+                    message: DUPLICATE_MESSAGE
                 });
             }
 
@@ -153,7 +157,7 @@ class MarqueController {
     static async update(req, res) {
         try {
             const { id } = req.params;
-            const { libelle, description, logo, idSiteCategory, isActive } = req.body;
+            const { libelle, description, logo, idSiteCategory, isActive, removeLogo } = req.body;
 
             const marque = await Marque.findByPk(id);
             if (!marque) {
@@ -163,12 +167,10 @@ class MarqueController {
                 });
             }
 
-            // Vérifier si le nouveau libellé existe déjà pour cette catégorie
             if (libelle && libelle !== marque.libelle) {
                 const existingMarque = await Marque.findOne({
                     where: {
                         libelle,
-                        idSiteCategory: idSiteCategory || marque.idSiteCategory,
                         id: { [Op.ne]: id }
                     }
                 });
@@ -176,29 +178,34 @@ class MarqueController {
                 if (existingMarque) {
                     return res.status(409).json({
                         success: false,
-                        message: 'Une marque avec ce libellé existe déjà pour cette catégorie'
+                        message: DUPLICATE_MESSAGE
                     });
                 }
             }
 
-            // Vérifier que la catégorie principale existe si elle est modifiée
-            if (idSiteCategory && idSiteCategory !== marque.idSiteCategory) {
-                const siteCategory = await SiteCategory.findByPk(idSiteCategory);
-                if (!siteCategory) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Catégorie principale non trouvée'
-                    });
-                }
+            if (!(await rayonIsValid(idSiteCategory))) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Rayon non trouvé'
+                });
             }
 
-            await marque.update({
-                libelle,
-                description,
-                logo,
-                idSiteCategory,
-                isActive
-            });
+            // Seuls les champs reçus sont modifiés : le formulaire n'envoie ni rayon ni logo inchangé.
+            const updates = {};
+            if (libelle !== undefined) updates.libelle = libelle;
+            if (description !== undefined) updates.description = description;
+            if (isActive !== undefined) updates.isActive = isActive;
+            if (idSiteCategory !== undefined) updates.idSiteCategory = idSiteCategory || null;
+
+            if (req.file) {
+                updates.logo = ImageHandler.processMainImage(req.file.buffer, req.file.mimetype);
+            } else if (removeLogo === true || removeLogo === 'true') {
+                updates.logo = null;
+            } else if (logo !== undefined) {
+                updates.logo = logo;
+            }
+
+            await marque.update(updates);
 
             return res.status(200).json({
                 success: true,
@@ -207,11 +214,11 @@ class MarqueController {
             });
         } catch (error) {
             console.error('Erreur mise à jour Marque:', error);
-            
+
             if (error.name === 'SequelizeUniqueConstraintError') {
                 return res.status(409).json({
                     success: false,
-                    message: 'Une marque avec ce libellé existe déjà pour cette catégorie'
+                    message: DUPLICATE_MESSAGE
                 });
             }
 

@@ -4,6 +4,9 @@ const ProduitController = require('../controllers/produitController');
 const { validateProduit } = require('../middleware/validators');
 const { uploadProductImages } = require('../middleware/upload');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageCatalog = requirePermission('catalog');
 
 /**
  * @swagger
@@ -88,6 +91,10 @@ router.get('/', ProduitController.getAll);
  *         description: Erreur serveur
  */
 router.get('/home', ProduitController.getAllHomeProduct);
+
+// Actions du back-office : déclarées avant les routes /:id
+router.post('/bulk', authenticate, canManageCatalog, ProduitController.bulk);
+router.post('/import', authenticate, canManageCatalog, ProduitController.importRows);
 
 /**
  * @swagger
@@ -211,7 +218,7 @@ router.get('/:id', ProduitController.getById);
  *       409:
  *         description: Référence déjà existante
  */
-router.post('/', authenticate, uploadProductImages, validateProduit, ProduitController.create);
+router.post('/', authenticate, canManageCatalog, uploadProductImages, validateProduit, ProduitController.create);
 
 /**
  * @swagger
@@ -278,7 +285,7 @@ router.post('/', authenticate, uploadProductImages, validateProduit, ProduitCont
  *       409:
  *         description: Référence déjà existante
  */
-router.put('/:id', authenticate, uploadProductImages, validateProduit, ProduitController.update);
+router.put('/:id', authenticate, canManageCatalog, uploadProductImages, validateProduit, ProduitController.update);
 
 /**
  * @swagger
@@ -299,7 +306,7 @@ router.put('/:id', authenticate, uploadProductImages, validateProduit, ProduitCo
  *       404:
  *         description: Produit non trouvé
  */
-router.delete('/:id', ProduitController.delete);
+router.delete('/:id', authenticate, canManageCatalog, ProduitController.delete);
 
 /**
  * @swagger
@@ -320,7 +327,7 @@ router.delete('/:id', ProduitController.delete);
  *       404:
  *         description: Produit non trouvé
  */
-router.post('/:id/restore', ProduitController.restore);
+router.post('/:id/restore', authenticate, canManageCatalog, ProduitController.restore);
 
 /**
  * @swagger
@@ -349,7 +356,7 @@ router.post('/:id/restore', ProduitController.restore);
  *       404:
  *         description: Produit non trouvé
  */
-router.put('/:id/stock', ProduitController.updateStock);
+router.put('/:id/stock', authenticate, canManageCatalog, ProduitController.updateStock);
 
 /**
  * @swagger

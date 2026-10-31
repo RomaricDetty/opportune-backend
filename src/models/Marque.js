@@ -31,18 +31,18 @@ const Marque = sequelize.define('Marque', {
         allowNull: true
     },
     logo: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.TEXT('long'),
         allowNull: true
     },
     idSiteCategory: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: SiteCategory,
             key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'SET NULL'
     },
     isActive: {
         type: DataTypes.BOOLEAN,

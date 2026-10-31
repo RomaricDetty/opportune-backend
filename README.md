@@ -36,6 +36,13 @@ npm run dev         # http://localhost:3000
 | `npm run db:seed` | Données de démo |
 | `npm run db:enrich` | Enrichissement contenus démo |
 | `npm run db:migrate` | Migrations Sequelize |
+| `npm run db:update` | Sauvegarde puis applique les migrations : **la seule commande de mise à jour du schéma** |
+| `npm run db:baseline` | Donne un historique de migrations à une base créée par `sync()` (une seule fois) |
+| `npm run db:backup` | Sauvegarde la base dans `backups/` (14 conservées) |
+| `npm run db:backup:verify` | Sauvegarde et vérifie la restauration sur une base temporaire |
+| `npm run images:migrate` | Compte les images base64 ; `-- --apply` les déplace vers `uploads/` |
+| `npm test` | Tests de l'API sur une base `<DB_NAME>_test` créée puis supprimée |
+| `npm run db:fix-marques` | Rend le rayon des marques optionnel et élargit le logo, sur une base créée via `sync()` (rejouable) |
 
 ## Principales routes
 
@@ -61,3 +68,33 @@ Préfixe : `/api`
 
 - Swagger (dev) : http://localhost:3000/api-docs
 - Health : `GET /api/health`
+
+## Déploiement
+
+1. `npm ci`
+2. `npm run db:update` **avant** de démarrer le nouveau code. Il sauvegarde la base, puis applique les migrations.
+3. Redémarrer l'API, puis déployer le dashboard et le site.
+4. Une fois l'API en ligne : `npm run images:migrate`, puis `npm run images:migrate -- --apply` (une seule fois).
+
+À définir en production :
+
+| Variable | Rôle |
+|----------|------|
+| `PUBLIC_API_URL` | Adresse publique de l'API : obligatoire derrière un proxy HTTPS, sinon les images partent en `http://` |
+| `UPLOADS_DIR` | Dossier des images, sur un **volume persistant** : il doit survivre aux déploiements |
+| `BACKUP_DIR` | Dossier des sauvegardes, idéalement hors du serveur de base de données |
+| `SMTP_*`, `NOTIFY_EMAILS` | Alertes e-mail des nouvelles commandes et demandes de devis (facultatif) |
+
+Sauvegarde quotidienne (cron), à compléter par une copie de `UPLOADS_DIR` et `BACKUP_DIR` hors du serveur :
+
+```cron
+0 3 * * * cd /chemin/opportune-backend && npm run -s db:backup >> backups/backup.log 2>&1
+```
+
+## Rôles du back-office
+
+| Rôle | Droits |
+|------|--------|
+| `admin` | Tout (comptes existants) |
+| `catalogue` | Articles, rayons, catégories, marques, publicités, apparence |
+| `commandes` | Commandes, clients, devis, messages |

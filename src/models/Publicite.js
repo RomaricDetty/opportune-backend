@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const { AD_SLOTS } = require('../constants/adSlots');
 const Category = require('./Category');
 const Produit = require('./Produit');
 
@@ -55,7 +56,7 @@ const Publicite = sequelize.define('Publicite', {
         defaultValue: 'hero',
         validate: {
             isIn: {
-                args: [['hero', 'home_mid', 'home_bottom']],
+                args: [AD_SLOTS],
                 msg: 'Emplacement invalide',
             },
         },

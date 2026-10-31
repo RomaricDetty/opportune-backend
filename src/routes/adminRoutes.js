@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const AdminController = require('../controllers/adminController');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageAdmins = requirePermission('admins');
 const { adminLoginLimiter } = require('../middleware/rateLimiters');
 
 /**
@@ -108,7 +111,7 @@ router.post('/login', adminLoginLimiter, AdminController.login);
  *       409:
  *         description: Login déjà existant
  */
-router.post('/', authenticate, AdminController.create);
+router.post('/', authenticate, canManageAdmins, AdminController.create);
 
 /**
  * @swagger
@@ -139,7 +142,7 @@ router.post('/', authenticate, AdminController.create);
  *                       items:
  *                         $ref: '#/components/schemas/Admin'
  */
-router.get('/', authenticate, AdminController.getAll);
+router.get('/', authenticate, canManageAdmins, AdminController.getAll);
 
 /**
  * @swagger
@@ -171,7 +174,7 @@ router.get('/', authenticate, AdminController.getAll);
  *       404:
  *         description: Administrateur non trouvé
  */
-router.get('/:id', authenticate, AdminController.getById);
+router.get('/:id', authenticate, canManageAdmins, AdminController.getById);
 
 /**
  * @swagger
@@ -222,6 +225,6 @@ router.get('/:id', authenticate, AdminController.getById);
  *       409:
  *         description: Login déjà existant
  */
-router.put('/:id', authenticate, AdminController.update);
+router.put('/:id', authenticate, canManageAdmins, AdminController.update);
 
 module.exports = router;

@@ -90,10 +90,9 @@ const validateMarque = [
         .withMessage('Le libellé doit contenir entre 2 et 100 caractères'),
 
     body('idSiteCategory')
-        .notEmpty()
-        .withMessage('L\'ID de la catégorie principale est requis')
+        .optional({ values: 'falsy' })
         .isUUID()
-        .withMessage('L\'ID de la catégorie principale doit être un UUID valide'),
+        .withMessage('L\'ID du rayon doit être un UUID valide'),
 
     body('description')
         .optional()
@@ -106,7 +105,8 @@ const validateMarque = [
     body('isActive')
         .optional()
         .isBoolean()
-        .withMessage('isActive doit être un booléen'),
+        .withMessage('isActive doit être un booléen')
+        .toBoolean(),
 
     (req, res, next) => {
         const errors = validationResult(req);

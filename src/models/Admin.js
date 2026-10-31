@@ -57,6 +57,17 @@ const Admin = sequelize.define('Admin', {
             }
         }
     },
+    role: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'admin',
+        validate: {
+            isIn: {
+                args: [['admin', 'catalogue', 'commandes']],
+                msg: 'Rôle invalide'
+            }
+        }
+    },
     isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

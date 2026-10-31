@@ -3,6 +3,9 @@ const router = express.Router();
 const SiteCategoryController = require('../controllers/siteCategoryController');
 const { validateSiteCategory } = require('../middleware/validators');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageCatalog = requirePermission('catalog');
 
 /**
  * @swagger
@@ -47,6 +50,7 @@ const authenticate = require('../middleware/auth');
 router.post(
     '/',
     authenticate,
+    canManageCatalog,
     validateSiteCategory,
     SiteCategoryController.create
 );
@@ -81,38 +85,6 @@ router.post(
 router.get(
     '/',
     SiteCategoryController.getAll
-);
-
-/**
- * @swagger
- * /site-categories/electromenagers/organized:
- *   get:
- *     summary: Récupérer les catégories d'électroménager organisées par type
- *     tags: [Site Categories]
- *     description: Retourne les catégories d'électroménager organisées en gros et petit électroménager
- *     responses:
- *       200:
- *         description: Catégories organisées
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         grosElectromenager:
- *                           type: object
- *                         petitElectromenager:
- *                           type: object
- *       404:
- *         description: Catégorie Electromenagers non trouvée
- */
-router.get(
-    '/electromenagers/organized',
-    SiteCategoryController.getElectromenagersOrganized
 );
 
 /**
@@ -179,6 +151,7 @@ router.get(
 router.put(
     '/:id',
     authenticate,
+    canManageCatalog,
     validateSiteCategory,
     SiteCategoryController.update
 );
@@ -204,6 +177,8 @@ router.put(
  */
 router.delete(
     '/:id',
+    authenticate,
+    canManageCatalog,
     SiteCategoryController.delete
 );
 
@@ -228,6 +203,8 @@ router.delete(
  */
 router.post(
     '/:id/restore',
+    authenticate,
+    canManageCatalog,
     SiteCategoryController.restore
 );
 

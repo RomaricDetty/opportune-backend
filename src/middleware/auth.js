@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { Admin } = require('../models');
 const { getJwtSecret } = require('../config/jwt');
+const { trackAdminAction } = require('./auditLog');
 
 /**
  * Middleware d'authentification par Bearer token
@@ -67,6 +68,7 @@ const authenticate = async (req, res, next) => {
 
         // Ajouter l'admin à la requête pour utilisation dans les controllers
         req.admin = admin;
+        trackAdminAction(req, res);
         next();
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {

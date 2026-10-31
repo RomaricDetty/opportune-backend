@@ -13,15 +13,30 @@ class SiteCategoryController {
         try {
             const { libelle, description, isActive } = req.body;
 
-            // Vérifier si la catégorie existe déjà
+            // paranoid: false car l'index unique couvre aussi les rayons supprimés
             const existingCategory = await SiteCategory.findOne({
-                where: { libelle }
+                where: { libelle },
+                paranoid: false
             });
 
-            if (existingCategory) {
+            if (existingCategory && !existingCategory.deletedAt) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Une catégorie avec ce libellé existe déjà'
+                    message: 'Un rayon porte déjà ce nom'
+                });
+            }
+
+            // Recréer un rayon supprimé revient à le restaurer
+            if (existingCategory) {
+                await existingCategory.restore();
+                await existingCategory.update({
+                    description,
+                    isActive: isActive !== undefined ? isActive : true
+                });
+                return res.status(201).json({
+                    success: true,
+                    message: 'Rayon restauré avec succès',
+                    data: existingCategory
                 });
             }
 
@@ -129,117 +144,13 @@ class SiteCategoryController {
     }
 
     /**
-     * Récupérer les catégories d'électroménager organisées par type (Gros/Petit)
-     * GET /api/site-categories/electromenagers/organized
-     */
-    static async getElectromenagersOrganized(req, res) {
-        try {
-            // Récupérer la catégorie principale "Electromenagers"
-            const electromenagersCategory = await SiteCategory.findOne({
-                where: { libelle: 'Electromenagers' }
-            });
-
-            if (!electromenagersCategory) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Catégorie Electromenagers non trouvée'
-                });
-            }
-
-            // Récupérer toutes les catégories d'électroménager
-            const allCategories = await Category.findAll({
-                where: {
-                    idSiteCategory: electromenagersCategory.id,
-                    isActive: true
-                },
-                attributes: ['id', 'libelle', 'description', 'isActive'],
-                order: [['createdAt', 'DESC']]
-            });
-
-            // Définir les listes de sous-catégories pour chaque type
-            const grosElectroSubcategories = [
-                'Cave à vin',
-                'Chauffe-eau',
-                'Climatisation',
-                'Congélateurs',
-                'Cuisine',
-                'Fours',
-                'Hottes',
-                'Lave-linge',
-                'Lave-linge séchant',
-                'Lave-vaisselle',
-                'Micro-ondes',
-                'Plaques de cuisson',
-                'Réfrigérateurs',
-                'Sèche-linge'
-            ];
-
-            const petitElectroSubcategories = [
-                'Aspirateurs',
-                'Autocuiseurs',
-                'Blenders',
-                'Bouilloires',
-                'Cafetières',
-                'Centrifugeuses',
-                'Fers à repasser',
-                'Friteuses',
-                'Grille-pain',
-                'Machines à café',
-                'Mixeurs',
-                'Planchas',
-                'Robots de cuisine',
-                'Sèche-cheveux'
-            ];
-
-            // Organiser les catégories
-            const grosElectro = allCategories.find(cat => cat.libelle === 'Gros électroménager');
-            const petitElectro = allCategories.find(cat => cat.libelle === 'Petit électroménager');
-
-            const organized = {
-                grosElectromenager: {
-                    category: grosElectro ? {
-                        id: grosElectro.id,
-                        libelle: grosElectro.libelle,
-                        description: grosElectro.description
-                    } : null,
-                    subcategories: allCategories.filter(cat => 
-                        grosElectroSubcategories.includes(cat.libelle)
-                    )
-                },
-                petitElectromenager: {
-                    category: petitElectro ? {
-                        id: petitElectro.id,
-                        libelle: petitElectro.libelle,
-                        description: petitElectro.description
-                    } : null,
-                    subcategories: allCategories.filter(cat => 
-                        petitElectroSubcategories.includes(cat.libelle)
-                    )
-                }
-            };
-
-            return res.status(200).json({
-                success: true,
-                data: organized
-            });
-        } catch (error) {
-            console.error('Erreur récupération catégories organisées:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la récupération des catégories organisées',
-                error: error.message
-            });
-        }
-    }
-
-    /**
      * Récupérer une catégorie par ID
      * GET /api/site-categories/:id
      */
     static async getById(req, res) {
         try {
             const { id } = req.params;
-            const { includeDeleted = false, organized = false } = req.query;
+            const { includeDeleted = false } = req.query;
 
             const options = {
                 where: { id },
@@ -273,50 +184,6 @@ class SiteCategoryController {
                 return res.status(404).json({
                     success: false,
                     message: 'Catégorie non trouvée'
-                });
-            }
-
-            // Si c'est Electromenagers et que organized=true, organiser les catégories
-            if (siteCategory.libelle === 'Electromenagers' && organized === 'true') {
-                const grosElectroSubcategories = [
-                    'Cave à vin', 'Chauffe-eau', 'Climatisation', 'Congélateurs',
-                    'Cuisine', 'Fours', 'Hottes', 'Lave-linge', 'Lave-linge séchant',
-                    'Lave-vaisselle', 'Micro-ondes', 'Plaques de cuisson',
-                    'Réfrigérateurs', 'Sèche-linge'
-                ];
-
-                const petitElectroSubcategories = [
-                    'Aspirateurs', 'Autocuiseurs', 'Blenders', 'Bouilloires',
-                    'Cafetières', 'Centrifugeuses', 'Fers à repasser', 'Friteuses',
-                    'Grille-pain', 'Machines à café', 'Mixeurs', 'Planchas',
-                    'Robots de cuisine', 'Sèche-cheveux'
-                ];
-
-                const categories = siteCategory.categories || [];
-                const grosElectro = categories.find(cat => cat.libelle === 'Gros électroménager');
-                const petitElectro = categories.find(cat => cat.libelle === 'Petit électroménager');
-
-                const organizedCategories = {
-                    grosElectromenager: {
-                        category: grosElectro || null,
-                        subcategories: categories.filter(cat => 
-                            grosElectroSubcategories.includes(cat.libelle)
-                        )
-                    },
-                    petitElectromenager: {
-                        category: petitElectro || null,
-                        subcategories: categories.filter(cat => 
-                            petitElectroSubcategories.includes(cat.libelle)
-                        )
-                    }
-                };
-
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        ...siteCategory.toJSON(),
-                        organizedCategories
-                    }
                 });
             }
 
@@ -383,6 +250,12 @@ class SiteCategoryController {
             });
         } catch (error) {
             console.error('Erreur mise à jour SiteCategory:', error);
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Ce nom est déjà pris par un rayon, éventuellement supprimé'
+                });
+            }
             return res.status(500).json({
                 success: false,
                 message: 'Erreur lors de la mise à jour de la catégorie',
@@ -409,22 +282,17 @@ class SiteCategoryController {
                 });
             }
 
-            // Vérifier s'il y a des éléments liés
+            // Les marques sont indépendantes des rayons : seules les catégories bloquent la suppression.
             const categoriesCount = await Category.count({
                 where: { idSiteCategory: id }
             });
 
-            const marquesCount = await Marque.count({
-                where: { idSiteCategory: id }
-            });
-
-            if (categoriesCount > 0 || marquesCount > 0) {
+            if (categoriesCount > 0) {
                 return res.status(400).json({
                     success: false,
-                    message: `Impossible de supprimer cette catégorie. Elle contient ${categoriesCount} sous-catégorie(s) et ${marquesCount} marque(s).`,
+                    message: `Impossible de supprimer ce rayon : il contient ${categoriesCount} catégorie(s). Déplacez-les ou supprimez-les d'abord.`,
                     details: {
-                        categoriesElectromenager: categoriesCount,
-                        marques: marquesCount
+                        categories: categoriesCount
                     }
                 });
             }

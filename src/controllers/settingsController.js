@@ -32,6 +32,7 @@ class SettingsController {
                 success: true,
                 data: {
                     siteName: settings.siteName,
+                    tagline: settings.tagline || null,
                     logo: settings.logo || null,
                     socials: toPublicSocials(settings),
                 },
@@ -77,6 +78,10 @@ class SettingsController {
             if (req.body.siteName !== undefined) {
                 const name = String(req.body.siteName || '').trim();
                 if (name) updates.siteName = name.slice(0, 120);
+            }
+
+            if (req.body.tagline !== undefined) {
+                updates.tagline = String(req.body.tagline || '').trim().slice(0, 160) || null;
             }
 
             if (req.file) {

@@ -1,4 +1,6 @@
-const { Produit, Marque, Category, SiteCategory } = require('../models');
+const { sequelize, Produit, Marque, Category, SiteCategory } = require('../models');
+const { toStoredImage } = require('../utils/uploads');
+const { importProducts } = require('../services/productImport');
 const { Op } = require('sequelize');
 const ImageHandler = require('../utils/imageHandler');
 
@@ -29,7 +31,9 @@ class ProduitController {
             if (idMarque) where.idMarque = idMarque;
             if (libelle) where.libelle = { [Op.like]: `%${libelle}%` };
             if (idCategory) where.idCategory = idCategory;
-            if (isActive !== undefined) where.isActive = isActive === 'true';
+            // Seul le back-office voit les articles désactivés.
+            if (!req.admin) where.isActive = true;
+            else if (isActive !== undefined) where.isActive = isActive === 'true';
             if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
             if (minPrice || maxPrice) {
                 where.prix = {};
@@ -131,6 +135,7 @@ class ProduitController {
 
             for (const siteCategory of siteCategories) {
                 const produits = await Produit.findAll({
+                    where: { isActive: true },
                     include: [
                         {
                             model: Marque,
@@ -229,12 +234,17 @@ static async incrementViews(req, res) {
                     {
                         model: Category,
                         as: 'category',
-                        attributes: ['id', 'libelle', 'description']
+                        attributes: ['id', 'libelle', 'description'],
+                        include: [{
+                            model: SiteCategory,
+                            as: 'siteCategory',
+                            attributes: ['id', 'libelle']
+                        }]
                     }
                 ]
             });
 
-            if (!produit) {
+            if (!produit || (!produit.isActive && !req.admin)) {
                 return res.status(404).json({
                     success: false,
                     message: 'Produit non trouvé'
@@ -273,7 +283,9 @@ static async incrementViews(req, res) {
                 caracteristiques,
                 reference,
                 isActive,
-                isAvailable
+                isAvailable,
+                remise,
+                reduction
             } = req.body;
 
             // Vérifier que la marque existe
@@ -377,6 +389,7 @@ static async incrementViews(req, res) {
                 images: processedImages,
                 caracteristiques: caracteristiques || {},
                 reference,
+                remise: remise ?? reduction ?? 0,
                 isActive: isActive !== undefined ? isActive : true,
                 isAvailable: isAvailable !== undefined ? isAvailable : true
             });
@@ -423,7 +436,9 @@ static async incrementViews(req, res) {
                 caracteristiques,
                 reference,
                 isActive,
-                isAvailable
+                isAvailable,
+                remise,
+                reduction
             } = req.body;
 
             const produit = await Produit.findByPk(id);
@@ -523,7 +538,7 @@ static async incrementViews(req, res) {
             let processedImages = produit.images || [];
             if (Array.isArray(keepImages) || newSecondaryImages.length > 0) {
                 const retained = Array.isArray(keepImages)
-                    ? keepImages.filter(Boolean)
+                    ? keepImages.filter(Boolean).map(toStoredImage)
                     : (Array.isArray(produit.images) ? produit.images : []);
                 const added = ImageHandler.processImagesArray(newSecondaryImages);
                 processedImages = [...retained, ...added];
@@ -570,6 +585,7 @@ static async incrementViews(req, res) {
                 images: processedImages,
                 caracteristiques,
                 reference,
+                remise: remise ?? reduction ?? produit.remise,
                 isActive,
                 isAvailable
             });
@@ -710,6 +726,92 @@ static async incrementViews(req, res) {
                 success: false,
                 message: 'Erreur lors de la mise à jour du stock'
             });
+        }
+    }
+
+    /**
+     * Modifie ou supprime plusieurs articles d'un coup.
+     * POST /api/admin/products/bulk
+     * @param {string[]} req.body.ids
+     * @param {'update'|'delete'} req.body.action
+     * @param {object} [req.body.changes] idCategory, idMarque, isActive, isAvailable, remise, prixPercent
+     */
+    static async bulk(req, res) {
+        try {
+            const { ids, action = 'update', changes = {} } = req.body;
+            if (!Array.isArray(ids) || ids.length === 0 || ids.length > 500) {
+                return res.status(400).json({ success: false, message: 'Sélectionnez entre 1 et 500 articles' });
+            }
+
+            if (action === 'delete') {
+                const count = await Produit.destroy({ where: { id: ids } });
+                return res.status(200).json({ success: true, message: `${count} article(s) supprimé(s)`, data: { count } });
+            }
+            if (action !== 'update') {
+                return res.status(400).json({ success: false, message: 'Action inconnue' });
+            }
+
+            const updates = {};
+            if (changes.idCategory) {
+                if (!(await Category.findByPk(changes.idCategory))) {
+                    return res.status(404).json({ success: false, message: 'Catégorie non trouvée' });
+                }
+                updates.idCategory = changes.idCategory;
+            }
+            if (changes.idMarque) {
+                if (!(await Marque.findByPk(changes.idMarque))) {
+                    return res.status(404).json({ success: false, message: 'Marque non trouvée' });
+                }
+                updates.idMarque = changes.idMarque;
+            }
+            if (typeof changes.isActive === 'boolean') updates.isActive = changes.isActive;
+            if (typeof changes.isAvailable === 'boolean') updates.isAvailable = changes.isAvailable;
+            if (changes.remise !== undefined && changes.remise !== null) {
+                const remise = Number(changes.remise);
+                if (!Number.isFinite(remise) || remise < 0 || remise > 100) {
+                    return res.status(400).json({ success: false, message: 'La remise doit être entre 0 et 100' });
+                }
+                updates.remise = remise;
+            }
+
+            if (changes.prixPercent !== undefined && changes.prixPercent !== null) {
+                const percent = Number(changes.prixPercent);
+                if (!Number.isFinite(percent) || percent <= -100 || percent > 1000) {
+                    return res.status(400).json({ success: false, message: 'Variation de prix invalide' });
+                }
+                // `percent` est validé comme nombre ci-dessus.
+                updates.prix = sequelize.literal(`ROUND(prix * ${1 + percent / 100})`);
+            }
+
+            if (Object.keys(updates).length === 0) {
+                return res.status(400).json({ success: false, message: 'Aucune modification demandée' });
+            }
+
+            const [count] = await Produit.update(updates, { where: { id: ids } });
+
+            return res.status(200).json({ success: true, message: `${count} article(s) modifié(s)`, data: { count } });
+        } catch (error) {
+            console.error('Erreur modification en masse:', error);
+            return res.status(500).json({ success: false, message: 'Erreur lors de la modification des articles' });
+        }
+    }
+
+    /**
+     * Importe des articles depuis les lignes d'un fichier.
+     * POST /api/admin/products/import
+     * @param {object[]} req.body.rows
+     * @param {boolean} [req.body.dryRun] Vérifie sans rien enregistrer
+     */
+    static async importRows(req, res) {
+        try {
+            const result = await importProducts(req.body.rows, { dryRun: req.body.dryRun === true });
+            return res.status(200).json({ success: true, data: result });
+        } catch (error) {
+            if (error.status) {
+                return res.status(error.status).json({ success: false, message: error.message });
+            }
+            console.error('Erreur import articles:', error);
+            return res.status(500).json({ success: false, message: "Erreur lors de l'import" });
         }
     }
 }

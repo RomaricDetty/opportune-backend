@@ -9,8 +9,10 @@ const {
     Marque,
     DemandeDevis,
     Wishlist,
-    Publicite
+    Publicite,
+    AdminLog
 } = require('../models');
+const { permissionsOf } = require('../middleware/permissions');
 
 /**
  * Controller statistiques du tableau de bord admin.
@@ -166,6 +168,79 @@ class DashboardController {
                 success: false,
                 message: 'Erreur lors de la récupération des statistiques'
             });
+        }
+    }
+
+    /**
+     * Pastilles du menu : ce qui attend une action de l'équipe.
+     * GET /api/admin/dashboard/counters
+     */
+    static async getCounters(req, res) {
+        try {
+            if (!permissionsOf(req.admin.role).includes('orders')) {
+                return res.status(200).json({ success: true, data: { orders: 0, devis: 0 } });
+            }
+            const [orders, devis] = await Promise.all([
+                Order.count({ where: { statut: 'pending' } }),
+                DemandeDevis.count({ where: { statut: 'en_attente' } })
+            ]);
+            return res.status(200).json({ success: true, data: { orders, devis } });
+        } catch (error) {
+            console.error('Erreur compteurs dashboard:', error);
+            return res.status(500).json({ success: false, message: 'Erreur lors de la récupération des compteurs' });
+        }
+    }
+
+    /**
+     * Points du catalogue à corriger.
+     * GET /api/admin/dashboard/health
+     */
+    static async getCatalogHealth(req, res) {
+        try {
+            const attributes = ['id', 'libelle'];
+            const emptyImage = { [Op.or]: [{ imagePrincipale: null }, { imagePrincipale: '' }] };
+            const [noImage, soldOut, noRayon, expiredAds] = await Promise.all([
+                Produit.findAll({ where: { isActive: true, ...emptyImage }, attributes }),
+                Produit.findAll({ where: { isActive: true, quantite_stock: 0 }, attributes }),
+                Category.findAll({ where: { idSiteCategory: null }, attributes }),
+                Publicite.findAll({
+                    where: { isActive: true, dateExpiration: { [Op.lt]: new Date() } },
+                    attributes
+                })
+            ]);
+            const issue = (key, label, route, items) => ({
+                key,
+                label,
+                route,
+                count: items.length,
+                examples: items.slice(0, 3).map((item) => item.libelle)
+            });
+            return res.status(200).json({
+                success: true,
+                data: [
+                    issue('soldOut', 'Articles en rupture de stock', '/articles', soldOut),
+                    issue('noImage', 'Articles sans image', '/articles', noImage),
+                    issue('noRayon', 'Catégories sans rayon', '/categories', noRayon),
+                    issue('expiredAds', 'Publicités expirées encore actives', '/publicites', expiredAds)
+                ]
+            });
+        } catch (error) {
+            console.error('Erreur santé catalogue:', error);
+            return res.status(500).json({ success: false, message: 'Erreur lors de la vérification du catalogue' });
+        }
+    }
+
+    /**
+     * Historique des dernières modifications du back-office.
+     * GET /api/admin/dashboard/logs
+     */
+    static async getLogs(req, res) {
+        try {
+            const logs = await AdminLog.findAll({ order: [['createdAt', 'DESC']], limit: 500 });
+            return res.status(200).json({ success: true, data: logs });
+        } catch (error) {
+            console.error('Erreur historique admin:', error);
+            return res.status(500).json({ success: false, message: "Erreur lors de la récupération de l'historique" });
         }
     }
 }

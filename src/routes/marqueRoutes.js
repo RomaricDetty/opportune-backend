@@ -3,6 +3,27 @@ const router = express.Router();
 const MarqueController = require('../controllers/marqueController');
 const { validateMarque } = require('../middleware/validators');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageCatalog = requirePermission('catalog');
+const { upload } = require('../middleware/upload');
+
+const uploadSingleLogo = upload.single('logo');
+
+/**
+ * Lit le formulaire multipart de la marque ; un logo refusé renvoie une 400 lisible.
+ */
+const uploadLogo = (req, res, next) => {
+    uploadSingleLogo(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({
+                success: false,
+                message: err.message || 'Erreur lors de l\'envoi du logo'
+            });
+        }
+        return next();
+    });
+};
 
 /**
  * @swagger
@@ -96,7 +117,7 @@ router.get('/:id', MarqueController.getById);
  *       409:
  *         description: Marque déjà existante pour cette catégorie
  */
-router.post('/', authenticate, validateMarque, MarqueController.create);
+router.post('/', authenticate, canManageCatalog, uploadLogo, validateMarque, MarqueController.create);
 
 /**
  * @swagger
@@ -125,7 +146,7 @@ router.post('/', authenticate, validateMarque, MarqueController.create);
  *       409:
  *         description: Marque déjà existante pour cette catégorie
  */
-router.put('/:id', authenticate, validateMarque, MarqueController.update);
+router.put('/:id', authenticate, canManageCatalog, uploadLogo, validateMarque, MarqueController.update);
 
 /**
  * @swagger
@@ -148,7 +169,7 @@ router.put('/:id', authenticate, validateMarque, MarqueController.update);
  *       404:
  *         description: Marque non trouvée
  */
-router.delete('/:id', authenticate, MarqueController.delete);
+router.delete('/:id', authenticate, canManageCatalog, MarqueController.delete);
 
 /**
  * @swagger
@@ -169,7 +190,7 @@ router.delete('/:id', authenticate, MarqueController.delete);
  *       404:
  *         description: Marque non trouvée
  */
-router.post('/:id/restore', authenticate, MarqueController.restore);
+router.post('/:id/restore', authenticate, canManageCatalog, MarqueController.restore);
 
 /**
  * @swagger

@@ -2,6 +2,9 @@ const express = require('express');
 const router  = express.Router();
 const PubliciteController   = require('../controllers/publiciteController');
 const authenticate          = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageCatalog = requirePermission('catalog');
 const { uploadPubliciteImages } = require('../middleware/upload');
 
 /**
@@ -121,7 +124,7 @@ router.get('/:id', PubliciteController.getById);
  *       404:
  *         description: Catégorie ou produit non trouvé
  */
-router.post('/', authenticate, uploadPubliciteImages, PubliciteController.create);
+router.post('/', authenticate, canManageCatalog, uploadPubliciteImages, PubliciteController.create);
 
 /**
  * @swagger
@@ -167,7 +170,7 @@ router.post('/', authenticate, uploadPubliciteImages, PubliciteController.create
  *       404:
  *         description: Publicité non trouvée
  */
-router.put('/:id', authenticate, uploadPubliciteImages, PubliciteController.update);
+router.put('/:id', authenticate, canManageCatalog, uploadPubliciteImages, PubliciteController.update);
 
 /**
  * @swagger
@@ -188,7 +191,7 @@ router.put('/:id', authenticate, uploadPubliciteImages, PubliciteController.upda
  *       404:
  *         description: Publicité non trouvée
  */
-router.delete('/:id', authenticate, PubliciteController.delete);
+router.delete('/:id', authenticate, canManageCatalog, PubliciteController.delete);
 
 /**
  * @swagger
@@ -209,6 +212,6 @@ router.delete('/:id', authenticate, PubliciteController.delete);
  *       404:
  *         description: Publicité non trouvée
  */
-router.patch('/:id/toggle', authenticate, PubliciteController.toggle);
+router.patch('/:id/toggle', authenticate, canManageCatalog, PubliciteController.toggle);
 
 module.exports = router;

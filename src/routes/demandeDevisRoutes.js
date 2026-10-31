@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const DemandeDevisController = require('../controllers/DemandeDevisController');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageOrders = requirePermission('orders');
 
 /**
  * @swagger
@@ -43,7 +46,7 @@ const authenticate = require('../middleware/auth');
  *                       items:
  *                         $ref: '#/components/schemas/DemandeDevis'
  */
-router.get('/', authenticate, DemandeDevisController.getAll);
+router.get('/', authenticate, canManageOrders, DemandeDevisController.getAll);
 /**
  * @swagger
  * /demande-devis/countByStatut:
@@ -73,7 +76,7 @@ router.get('/', authenticate, DemandeDevisController.getAll);
  *                           type: integer
  *                           example: 8
  */
-router.get('/stats', authenticate, DemandeDevisController.countByStatut);
+router.get('/stats', authenticate, canManageOrders, DemandeDevisController.countByStatut);
 
 /**
  * @swagger
@@ -103,7 +106,7 @@ router.get('/stats', authenticate, DemandeDevisController.countByStatut);
  *       404:
  *         description: Demande de devis non trouvée
  */
-router.get('/:id', authenticate, DemandeDevisController.getById);
+router.get('/:id', authenticate, canManageOrders, DemandeDevisController.getById);
 
 /**
  * @swagger
@@ -172,7 +175,7 @@ router.post('/', DemandeDevisController.create);
  *     summary: Mettre à jour le statut (alias historique)
  *     tags: [DemandeDevis]
  */
-router.put('/updateStatut/:id', authenticate, DemandeDevisController.updateStatut);
+router.put('/updateStatut/:id', authenticate, canManageOrders, DemandeDevisController.updateStatut);
 
 /**
  * @swagger
@@ -208,8 +211,8 @@ router.put('/updateStatut/:id', authenticate, DemandeDevisController.updateStatu
  *       404:
  *         description: Demande de devis non trouvée
  */
-router.put('/:id/statut', authenticate, DemandeDevisController.updateStatut);
-router.patch('/:id/statut', authenticate, DemandeDevisController.updateStatut);
+router.put('/:id/statut', authenticate, canManageOrders, DemandeDevisController.updateStatut);
+router.patch('/:id/statut', authenticate, canManageOrders, DemandeDevisController.updateStatut);
 
 /**
  * @swagger
@@ -230,6 +233,6 @@ router.patch('/:id/statut', authenticate, DemandeDevisController.updateStatut);
  *       404:
  *         description: Demande de devis non trouvée
  */
-router.delete('/:id', authenticate, DemandeDevisController.delete);
+router.delete('/:id', authenticate, canManageOrders, DemandeDevisController.delete);
 
 module.exports = router;

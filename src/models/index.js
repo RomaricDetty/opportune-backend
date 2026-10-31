@@ -4,6 +4,7 @@ const Category = require('./Category');
 const Marque = require('./Marque');
 const Produit = require('./Produit');
 const Admin = require('./Admin');
+const AdminLog = require('./AdminLog');
 const DemandeDevis = require('./DemandeDevis');
 const DemandeDevisItems = require('./DemandeDevisItems');
 const Publicite = require('./Publicite');
@@ -46,6 +47,7 @@ const models = {
     Marque,
     Produit,
     Admin,
+    AdminLog,
     DemandeDevis,
     DemandeDevisItems,
     Publicite,
@@ -59,7 +61,7 @@ const models = {
 
 /**
  * Synchronise toutes les tables selon les modèles.
- * En production le schéma est géré par les migrations (pas de alter).
+ * Le schéma des tables existantes est géré par les migrations (npm run db:update).
  * @param {boolean} [force=false] - Recrée les tables si true
  */
 const syncModels = async (force = false) => {
@@ -69,8 +71,9 @@ const syncModels = async (force = false) => {
             console.log('Connexion DB OK (production : schéma via migrations)');
             return;
         }
-        await sequelize.sync({ force, alter: !force });
-        console.log(`Tables synchronisées ${force ? '(recréées)' : '(mise à jour)'}`);
+        // Pas de `alter` : il recrée les index uniques à chaque démarrage jusqu'à la limite MySQL.
+        await sequelize.sync({ force });
+        console.log(`Tables synchronisées ${force ? '(recréées)' : '(tables manquantes créées)'}`);
     } catch (error) {
         console.error('Erreur lors de la synchronisation:', error);
         throw error;

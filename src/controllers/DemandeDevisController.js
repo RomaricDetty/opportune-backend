@@ -1,3 +1,4 @@
+const { notifyTeam } = require('../utils/notifier');
 // controllers/DemandeDevisController.js
 const { DemandeDevis, DemandeDevisItems, Produit, Marque, Category, sequelize } = require('../models');
 const { Op } = require('sequelize');
@@ -51,6 +52,11 @@ class DemandeDevisController {
             const result = await DemandeDevis.findByPk(demandeDevis.id, {
                 include: [{ model: DemandeDevisItems, as: 'items', include: [{ model: Produit, as: 'produit', attributes: ['id', 'libelle', 'imagePrincipale', 'prix'] }] }]
             });
+
+            notifyTeam(
+                'Nouvelle demande de devis',
+                `Client : ${prenomClient || ''} ${nomClient || ''}\nTéléphone : ${telephone || ''}\nMessage : ${message || ''}`,
+            );
 
             return res.status(201).json({ success: true, message: 'Demande de devis enregistrée avec succès', data: result });
 

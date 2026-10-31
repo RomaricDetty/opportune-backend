@@ -3,6 +3,9 @@ const router = express.Router();
 const CategoryController = require('../controllers/categoryController');
 const { validateCategory } = require('../middleware/validators');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+const canManageCatalog = requirePermission('catalog');
 
 /**
  * @swagger
@@ -33,39 +36,6 @@ const authenticate = require('../middleware/auth');
  *                         $ref: '#/components/schemas/Category'
  */
 router.get('/', CategoryController.getAll);
-
-/**
- * @swagger
- * /categories/electro:
- *   get:
- *     summary: Récupérer les catégories d'électroménager organisées
- *     tags: [Categories]
- *     description: Retourne les catégories d'électroménager séparées en gros et petit électroménager
- *     responses:
- *       200:
- *         description: Catégories d'électroménager organisées
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         petitsElectromenagers:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/Category'
- *                         grosElectromenagers:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/Category'
- *       404:
- *         description: Catégorie principale Electromenagers non trouvée
- */
-router.get('/electro', CategoryController.getElectroCategory);
 
 /**
  * @swagger
@@ -106,30 +76,7 @@ router.get('/:id', CategoryController.getById);
  *       400:
  *         description: Erreur de validation
  */
-router.post('/', authenticate, validateCategory, CategoryController.create);
-
-/**
- * @swagger
- * /categories/electro:
- *   post:
- *     summary: Créer une sous-catégorie d'électroménager
- *     tags: [Categories]
- *     description: Crée une sous-catégorie pour les électroménagers en précisant si c'est un gros ou petit électroménager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ElectroCategoryInput'
- *     responses:
- *       201:
- *         description: Sous-catégorie créée avec succès
- *       400:
- *         description: Erreur de validation
- *       409:
- *         description: Sous-catégorie déjà existante
- */
-router.post('/electro', authenticate, CategoryController.createElectroCategory);
+router.post('/', authenticate, canManageCatalog, validateCategory, CategoryController.create);
 
 /**
  * @swagger
@@ -156,7 +103,7 @@ router.post('/electro', authenticate, CategoryController.createElectroCategory);
  *       404:
  *         description: Catégorie non trouvée
  */
-router.put('/:id', authenticate, validateCategory, CategoryController.update);
+router.put('/:id', authenticate, canManageCatalog, validateCategory, CategoryController.update);
 
 /**
  * @swagger
@@ -177,7 +124,7 @@ router.put('/:id', authenticate, validateCategory, CategoryController.update);
  *       404:
  *         description: Catégorie non trouvée
  */
-router.delete('/:id', CategoryController.delete);
+router.delete('/:id', authenticate, canManageCatalog, CategoryController.delete);
 
 /**
  * @swagger
@@ -198,7 +145,7 @@ router.delete('/:id', CategoryController.delete);
  *       404:
  *         description: Catégorie non trouvée
  */
-router.post('/:id/restore', CategoryController.restore);
+router.post('/:id/restore', authenticate, canManageCatalog, CategoryController.restore);
 
 /**
  * @swagger

@@ -9,6 +9,7 @@ const {
     Category
 } = require('../models');
 const { priceAfterDiscount } = require('../utils/formatPrice');
+const { notifyTeam } = require('../utils/notifier');
 
 /**
  * Controller commandes e-commerce
@@ -51,7 +52,8 @@ class OrderController {
 
             for (const item of items) {
                 const quantite = Math.max(1, parseInt(item.quantite, 10) || 1);
-                const produit = await Produit.findByPk(item.idProduit, { transaction: t });
+                // Verrou : deux commandes simultanées ne peuvent pas vendre la même unité.
+                const produit = await Produit.findByPk(item.idProduit, { transaction: t, lock: t.LOCK.UPDATE });
 
                 if (!produit || !produit.isActive || !produit.isAvailable) {
                     await t.rollback();
@@ -105,6 +107,12 @@ class OrderController {
             }
 
             await t.commit();
+
+            notifyTeam(
+                `Nouvelle commande ${order.reference || ''}`.trim(),
+                `Montant : ${montantTotal} FCFA\nVille : ${villeLivraison}\nTéléphone : ${telephoneLivraison}\n`
+                + lines.map((line) => `- ${line.quantite} x ${line.produit.libelle}`).join('\n'),
+            );
 
             const created = await Order.findByPk(order.id, {
                 include: [
@@ -267,11 +275,13 @@ class OrderController {
      * PUT /api/admin/orders/:id/statut
      */
     static async updateStatut(req, res) {
+        const t = await sequelize.transaction();
         try {
             const { statut, statutPaiement } = req.body;
-            const order = await Order.findByPk(req.params.id);
+            const order = await Order.findByPk(req.params.id, { transaction: t, lock: t.LOCK.UPDATE });
 
             if (!order) {
+                await t.rollback();
                 return res.status(404).json({
                     success: false,
                     message: 'Commande introuvable'
@@ -284,6 +294,7 @@ class OrderController {
             const allowedPaiements = ['unpaid', 'paid', 'refunded'];
 
             if (statut && !allowedStatuts.includes(statut)) {
+                await t.rollback();
                 return res.status(400).json({
                     success: false,
                     message: 'Statut invalide'
@@ -291,15 +302,42 @@ class OrderController {
             }
 
             if (statutPaiement && !allowedPaiements.includes(statutPaiement)) {
+                await t.rollback();
                 return res.status(400).json({
                     success: false,
                     message: 'Statut de paiement invalide'
                 });
             }
 
+            // Annuler rend le stock ; réactiver une commande annulée le reprend.
+            const cancelling = statut === 'cancelled' && order.statut !== 'cancelled';
+            const reviving = Boolean(statut) && statut !== 'cancelled' && order.statut === 'cancelled';
+            if (cancelling || reviving) {
+                const items = await OrderItem.findAll({ where: { idOrder: order.id }, transaction: t });
+                for (const item of items) {
+                    const produit = await Produit.findByPk(item.idProduit, {
+                        transaction: t,
+                        lock: t.LOCK.UPDATE,
+                        paranoid: false
+                    });
+                    if (!produit) continue;
+                    if (reviving && produit.quantite_stock < item.quantite) {
+                        await t.rollback();
+                        return res.status(400).json({
+                            success: false,
+                            message: `Stock insuffisant pour réactiver la commande : ${produit.libelle}`
+                        });
+                    }
+                    await produit.update({
+                        quantite_stock: produit.quantite_stock + (cancelling ? item.quantite : -item.quantite)
+                    }, { transaction: t });
+                }
+            }
+
             if (statut) order.statut = statut;
             if (statutPaiement) order.statutPaiement = statutPaiement;
-            await order.save();
+            await order.save({ transaction: t });
+            await t.commit();
 
             return res.status(200).json({
                 success: true,
@@ -307,6 +345,7 @@ class OrderController {
                 data: order
             });
         } catch (error) {
+            await t.rollback();
             console.error('Erreur update statut order:', error);
             return res.status(500).json({
                 success: false,

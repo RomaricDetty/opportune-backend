@@ -1,10 +1,11 @@
 const express = require('express');
 const OrderController = require('../controllers/orderController');
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
-router.use(authenticate);
+router.use(authenticate, requirePermission('orders'));
 router.get('/', OrderController.getAll);
 router.get('/:id', OrderController.adminGetById);
 router.put('/:id/statut', OrderController.updateStatut);

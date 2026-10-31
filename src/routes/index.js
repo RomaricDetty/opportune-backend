@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authenticate = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 // Importer toutes les routes
 const siteCategoryRoutes = require('./siteCategoryRoutes');
 const categoryRoutes = require('./categoryRoutes');
@@ -44,6 +45,7 @@ router.get('/admin/settings', authenticate, SettingsController.getAdmin);
 router.put(
     '/admin/settings',
     authenticate,
+    requirePermission('catalog'),
     (req, res, next) => {
         uploadLogo(req, res, (err) => {
             if (err) {

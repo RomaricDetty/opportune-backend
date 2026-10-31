@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { syncModels } = require('./models');
 const routes = require('./routes');
+const { UPLOADS_DIR, absoluteUploads } = require('./utils/uploads');
 const { apiLimiter } = require('./middleware/rateLimiters');
 const seedDatabase = require('./scripts/seedDatabase');
 
@@ -93,10 +94,15 @@ if (!isProd) {
 }
 
 // Servir les fichiers statiques (uploads)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(UPLOADS_DIR, {
+    maxAge: '30d',
+    immutable: true,
+    // Un SVG ouvert directement ne doit pas pouvoir exécuter de script.
+    setHeaders: (res) => res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox"),
+}));
 
 // Routes de l'API
-app.use('/api', routes);
+app.use('/api', absoluteUploads, routes);
 
 // Route racine
 app.get('/', (req, res) => {
@@ -194,7 +200,9 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-// Démarrer le serveur
-startServer();
+// Démarrer le serveur (les tests importent l'application sans l'écouter)
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;

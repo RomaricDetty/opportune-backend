@@ -18,6 +18,10 @@ const SiteSetting = sequelize.define(
             allowNull: false,
             defaultValue: 'Electro Store',
         },
+        tagline: {
+            type: DataTypes.STRING(160),
+            allowNull: true,
+        },
         logo: {
             type: DataTypes.TEXT('long'),
             allowNull: true,

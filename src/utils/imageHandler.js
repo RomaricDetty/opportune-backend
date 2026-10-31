@@ -2,6 +2,8 @@
  * Utilitaire pour gérer les images des produits
  * Supporte à la fois le format base64, les fichiers uploadés et les chemins de fichiers
  */
+const { saveImage } = require('./uploads');
+
 class ImageHandler {
     /**
      * Vérifie si une chaîne est une image base64
@@ -76,9 +78,9 @@ class ImageHandler {
     static processMainImage(imageData, mimeType = null) {
         if (!imageData) return null;
         
-        // Si c'est un Buffer (fichier uploadé), convertir en base64
+        // Un fichier envoyé est écrit sur disque ; la base ne garde que son chemin.
         if (Buffer.isBuffer(imageData)) {
-            return this.fileToBase64(imageData, mimeType);
+            return saveImage(imageData, this.normalizeMimeType(mimeType));
         }
         
         // Si c'est du base64, on le garde tel quel
@@ -106,14 +108,13 @@ class ImageHandler {
         return imagesArray.map(image => {
             if (!image) return image;
             
-            // Si c'est un Buffer (fichier uploadé), convertir en base64
             if (Buffer.isBuffer(image)) {
-                return this.fileToBase64(image, image.mimetype || 'image/jpeg');
+                return saveImage(image, this.normalizeMimeType(image.mimetype));
             }
             
-            // Si c'est un objet avec buffer et mimetype (format multer)
+            // Format multer
             if (image.buffer && Buffer.isBuffer(image.buffer)) {
-                return this.fileToBase64(image.buffer, image.mimetype || 'image/jpeg');
+                return saveImage(image.buffer, this.normalizeMimeType(image.mimetype));
             }
             
             // Si c'est une chaîne base64, on la garde tel quel

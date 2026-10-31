@@ -1,5 +1,5 @@
 /** Emplacements publicitaires du site. */
-const AD_SLOTS = ['hero', 'home_mid', 'home_bottom']
+const AD_SLOTS = ['hero', 'home_mid', 'home_bottom', 'product_side']
 
 const AD_SLOT_DEFAULT = 'hero'
 

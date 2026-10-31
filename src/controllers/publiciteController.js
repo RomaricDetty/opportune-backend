@@ -163,16 +163,9 @@ static async getAll(req, res) {
         let processedImage = null;
 
         if (req.file) {
-            const base64 = ImageHandler.processMainImage(req.file.buffer, req.file.mimetype);
+            const storedImage = ImageHandler.processMainImage(req.file.buffer, req.file.mimetype);
 
-            if (!ImageHandler.validateBase64(base64)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Format d\'image invalide. Utilisez base64 (jpeg, jpg, png, gif, webp)'
-                });
-            }
-
-            processedImage = base64;
+            processedImage = storedImage;
         }
 
         // ─── Création ─────────────────────────────────────────────────────
@@ -259,14 +252,8 @@ static async getAll(req, res) {
 
             let nextImages = publicite.images;
             if (req.file) {
-                const base64 = ImageHandler.processMainImage(req.file.buffer, req.file.mimetype);
-                if (!ImageHandler.validateBase64(base64)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Format d\'image invalide. Utilisez base64 (jpeg, jpg, png, gif, webp)'
-                    });
-                }
-                nextImages = JSON.stringify([base64]);
+                const storedImage = ImageHandler.processMainImage(req.file.buffer, req.file.mimetype);
+                nextImages = JSON.stringify([storedImage]);
             }
 
             const nextExpiration = dateExpiration !== undefined

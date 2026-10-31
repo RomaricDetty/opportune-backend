@@ -279,7 +279,7 @@ const swaggerOptions = {
                             example: true
                         }
                     },
-                    required: ['libelle', 'idSiteCategory']
+                    required: ['libelle']
                 },
                 // Produit
                 Produit: {
